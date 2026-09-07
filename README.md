@@ -42,8 +42,8 @@ hình clock của project thay đổi, phải nhập lại đúng tần số cor
 3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Màn hình 1 hiện `H100`,
    `H 70`, hoặc `H 40`; màn hình 2 hiện nhiệt độ.
 4. Bắt đầu lưu nội dung SWV ITM Data Console rồi nhấn **START**.
-   Firmware điều chế SSR theo cửa sổ 10 giây, lấy mẫu mỗi giây và tự dừng sau
-   45 phút. Nhấn START lần nữa để dừng sớm. Dòng tiêu đề CSV được gửi qua SWO ngay khi bắt đầu.
+   Firmware điều chế SSR theo cửa sổ 10 giây, lấy mẫu mỗi 10 giây và tự dừng sau
+   20 phút. Nhấn START lần nữa để dừng sớm. Mỗi lần chạy chỉ tạo khoảng 120 mẫu.
 5. Để hệ thống nguội về cùng nhiệt độ ban đầu rồi mới chạy mức công suất kế
    tiếp. Nên lưu mỗi mức vào một file riêng (`step_100.csv`, `step_70.csv`,
    `step_40.csv`). Không vận hành thiết bị nếu các liên động an toàn chưa được
@@ -52,11 +52,11 @@ hình clock của project thay đổi, phải nhập lại đúng tần số cor
 Dòng dữ liệu có dạng:
 
 ```csv
-elapsed_ms,power_percent,heater_on,temperature_c,status
-1000,70,1,27.4,RUN
+elapsed_s,power_percent,temperature_c,status
+10,70,27.4,RUN
 ```
 
-`heater_on` cho biết trạng thái SSR thực tế trong cửa sổ điều chế. Firmware vẫn
+CSV chỉ giữ bốn cột cần cho nhận dạng để file ngắn và dễ xử lý. Firmware vẫn
 ngắt khi cửa mở, lỗi PT100 hoặc nhiệt độ vượt 138 °C.
 
 ## Dựng biểu đồ, hàm truyền và PID

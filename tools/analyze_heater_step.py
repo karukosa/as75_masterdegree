@@ -18,7 +18,8 @@ def read_samples(path: Path) -> list[tuple[float, float, float]]:
                 continue
             samples.append(
                 (
-                    float(row["elapsed_ms"]) / 1000.0,
+                    float(row["elapsed_s"]) if "elapsed_s" in row
+                    else float(row["elapsed_ms"]) / 1000.0,
                     float(row["power_percent"]) / 100.0,
                     float(row["temperature_c"]),
                 )

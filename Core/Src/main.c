@@ -89,9 +89,9 @@ typedef struct {
 
 /* Heater identification mode. P1/P2/P3 select 100/70/40 %, START runs a
  * time-proportioned open-loop step test. The samples are CSV over USB CDC. */
-#define HEATER_TEST_SAMPLE_MS 1000U
+#define HEATER_TEST_SAMPLE_MS 10000U
 #define HEATER_TEST_WINDOW_MS 10000U
-#define HEATER_TEST_DURATION_MS (45U * MINUTE_MS)
+#define HEATER_TEST_DURATION_MS (20U * MINUTE_MS)
 
 /* USER CODE END PD */
 
@@ -116,10 +116,7 @@ uint8_t gSafetyErrorActive = 0U;
 StartupSafetyState gStartupSafetyState = STARTUP_SAFETY_CHECK_PT100;
 uint32_t gStartupSafetyStartTick = 0U;
 static uint8_t gHeaterTestPowerPercent = 100U;
-static uint8_t gHeaterTestActivePowerPercent = 0U;
 static uint8_t gHeaterTestRunning = 0U;
-static uint8_t gHeaterTestHeaderSent = 0U;
-static uint8_t gHeaterTestHeaterOn = 0U;
 static uint32_t gHeaterTestStartTick = 0U;
 static uint32_t gHeaterTestLastSampleTick = 0U;
 
@@ -508,18 +505,9 @@ static void HeaterTest_Start(uint32_t now)
     return;
   }
 
-  /* Freeze the selected duty for the whole experiment. From this point onward
-   * temperature is measured/logged only; it is never fed back to the output. */
-  gHeaterTestActivePowerPercent = gHeaterTestPowerPercent;
   gHeaterTestStartTick = now;
   gHeaterTestLastSampleTick = now - HEATER_TEST_SAMPLE_MS;
-  gHeaterTestHeaderSent = DataLogger_Write(
-      "elapsed_ms,power_percent,heater_on,temperature_c,status\r\n");
-  if (gHeaterTestHeaderSent == 0U) {
-    /* Never energize a heater when there is nowhere to record the result. */
-    SafetyOutputs_Stop();
-    return;
-  }
+  (void)DataLogger_Write("elapsed_s,power_percent,temperature_c,status\r\n");
 
   gHeaterTestRunning = 1U;
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_SET);
@@ -532,8 +520,6 @@ static void HeaterTest_Stop(const char *status, uint32_t now)
     HeaterTest_LogSample(now, status);
   }
   gHeaterTestRunning = 0U;
-  gHeaterTestActivePowerPercent = 0U;
-  gHeaterTestHeaterOn = 0U;
   SafetyOutputs_Stop();
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
 }
@@ -541,16 +527,17 @@ static void HeaterTest_Stop(const char *status, uint32_t now)
 static void HeaterTest_ApplyPower(uint32_t now)
 {
   uint32_t elapsedInWindow = (now - gHeaterTestStartTick) % HEATER_TEST_WINDOW_MS;
+  uint8_t heaterOn;
   /* Pure open-loop time-proportioning:
    *   100 % = 10 s ON / 0 s OFF
    *    70 % =  7 s ON / 3 s OFF
    *    40 % =  4 s ON / 6 s OFF
    * There is deliberately no setpoint, error calculation, or PID call here. */
-  uint32_t onTime = (HEATER_TEST_WINDOW_MS * gHeaterTestActivePowerPercent) / 100U;
+  uint32_t onTime = (HEATER_TEST_WINDOW_MS * gHeaterTestPowerPercent) / 100U;
 
-  gHeaterTestHeaterOn = (elapsedInWindow < onTime) ? 1U : 0U;
+  heaterOn = (elapsedInWindow < onTime) ? 1U : 0U;
   HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin,
-                    (gHeaterTestHeaterOn != 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+                    (heaterOn != 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SSR_HResistor_GPIO_Port, SSR_HResistor_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(Relay_Pump_GPIO_Port, Relay_Pump_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(Relay_Valve1_GPIO_Port, Relay_Valve1_Pin, GPIO_PIN_RESET);
@@ -563,9 +550,9 @@ static void HeaterTest_LogSample(uint32_t now, const char *status)
   char line[96];
   int16_t temperature = gTemperatureTenthsC;
 
-  (void)snprintf(line, sizeof(line), "%lu,%u,%u,%d.%01d,%s\r\n",
-                 (unsigned long)(now - gHeaterTestStartTick),
-                 gHeaterTestActivePowerPercent, gHeaterTestHeaterOn,
+  (void)snprintf(line, sizeof(line), "%lu,%u,%d.%01d,%s\r\n",
+                 (unsigned long)((now - gHeaterTestStartTick) / 1000U),
+                 gHeaterTestPowerPercent,
                  temperature / 10, (temperature < 0 ? -temperature : temperature) % 10,
                  status);
   (void)DataLogger_Write(line);
@@ -620,11 +607,6 @@ static void HeaterTest_Process(uint32_t now)
   }
 
   HeaterTest_ApplyPower(now);
-  if (gHeaterTestHeaderSent == 0U) {
-    gHeaterTestHeaderSent = DataLogger_Write(
-        "elapsed_ms,power_percent,heater_on,temperature_c,status\r\n");
-    return;
-  }
   if ((now - gHeaterTestLastSampleTick) < HEATER_TEST_SAMPLE_MS) {
     return;
   }
