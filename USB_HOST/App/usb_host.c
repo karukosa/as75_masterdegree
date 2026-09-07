@@ -25,11 +25,16 @@
 #include "usbh_cdc.h"
 
 /* USER CODE BEGIN Includes */
+#include <string.h>
 
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+
+#define CDC_LOG_BUFFER_SIZE 128U
+static uint8_t cdcLogBuffer[CDC_LOG_BUFFER_SIZE];
+static volatile uint8_t cdcLogBusy = 0U;
 
 /* USER CODE END PV */
 
@@ -46,6 +51,35 @@ ApplicationTypeDef Appli_state = APPLICATION_IDLE;
  * -- Insert your variables declaration here --
  */
 /* USER CODE BEGIN 0 */
+
+uint8_t USB_HOST_CDC_Write(const char *text)
+{
+  size_t length;
+
+  if (text == NULL || Appli_state != APPLICATION_READY || cdcLogBusy != 0U) {
+    return 0U;
+  }
+
+  length = strlen(text);
+  if (length == 0U || length >= CDC_LOG_BUFFER_SIZE) {
+    return 0U;
+  }
+
+  memcpy(cdcLogBuffer, text, length);
+  cdcLogBusy = 1U;
+  if (USBH_CDC_Transmit(&hUsbHostFS, cdcLogBuffer, (uint32_t)length) != USBH_OK) {
+    cdcLogBusy = 0U;
+    return 0U;
+  }
+
+  return 1U;
+}
+
+void USBH_CDC_TransmitCallback(USBH_HandleTypeDef *phost)
+{
+  (void)phost;
+  cdcLogBusy = 0U;
+}
 
 /* USER CODE END 0 */
 
@@ -110,6 +144,7 @@ static void USBH_UserProcess  (USBH_HandleTypeDef *phost, uint8_t id)
 
   case HOST_USER_DISCONNECTION:
   Appli_state = APPLICATION_DISCONNECT;
+  cdcLogBusy = 0U;
   break;
 
   case HOST_USER_CLASS_ACTIVE:
