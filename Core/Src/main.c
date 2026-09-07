@@ -91,7 +91,7 @@ typedef struct {
  * time-proportioned open-loop step test. The samples are CSV over USB CDC. */
 #define HEATER_TEST_SAMPLE_MS 10000U
 #define HEATER_TEST_WINDOW_MS 10000U
-#define HEATER_TEST_DURATION_MS (20U * MINUTE_MS)
+#define HEATER_TEST_DURATION_MS (25U * MINUTE_MS)
 
 /* USER CODE END PD */
 
