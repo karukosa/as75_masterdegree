@@ -72,6 +72,10 @@ void MX_USB_HOST_Init(void);
 
 void MX_USB_HOST_Process(void);
 
+/** Queue one null-terminated line for the attached USB CDC adapter.
+ *  The caller may reuse its buffer immediately. Returns 1 when accepted. */
+uint8_t USB_HOST_CDC_Write(const char *text);
+
 /**
   * @}
   */
