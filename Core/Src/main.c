@@ -26,6 +26,7 @@
 #include "tm1637.h"
 #include "button_input.h"
 #include "pid.h"
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -154,6 +155,12 @@ typedef struct {
 #define TEMPERATURE_FILTER_ALPHA_DENOMINATOR 4
 #define TEMPERATURE_FILTER_MAX_STEP_TENTHS 50
 
+/* Heater identification mode. P1/P2/P3 select 100/70/40 %, START runs a
+ * time-proportioned open-loop step test. The samples are CSV over USB CDC. */
+#define HEATER_TEST_SAMPLE_MS 1000U
+#define HEATER_TEST_WINDOW_MS 10000U
+#define HEATER_TEST_DURATION_MS (45U * MINUTE_MS)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -210,6 +217,12 @@ uint8_t gDryJacketHeaterOn = 0U;
 static uint8_t gTemperatureReadFailCount = 0U;
 static uint8_t gTemperatureFilterReady = 0U;
 static int16_t gFilteredTemperatureTenthsC = 0;
+static uint8_t gHeaterTestPowerPercent = 100U;
+static uint8_t gHeaterTestRunning = 0U;
+static uint8_t gHeaterTestHeaderSent = 0U;
+static uint8_t gHeaterTestHeaterOn = 0U;
+static uint32_t gHeaterTestStartTick = 0U;
+static uint32_t gHeaterTestLastSampleTick = 0U;
 
 static const ProgramConfig programPresets[PROGRAM_COUNT] = {
   {1210U, 15U, 0U}, {1210U, 20U, 15U}, {1320U, 7U, 10U},
@@ -314,6 +327,12 @@ static void SafetyError_Clear(void);
 static void Buzzer_Play(BuzzerEvent event);
 static void Buzzer_Process(uint32_t now);
 static void Buzzer_Set(uint8_t on);
+static void HeaterTest_Process(uint32_t now);
+static void HeaterTest_Start(uint32_t now);
+static void HeaterTest_Stop(const char *status, uint32_t now);
+static void HeaterTest_ApplyPower(uint32_t now);
+static void HeaterTest_LogSample(uint32_t now, const char *status);
+static void HeaterTest_DisplayPower(void);
 
 /* USER CODE END PFP */
 
@@ -1679,6 +1698,156 @@ static void Buzzer_Set(uint8_t on)
   HAL_GPIO_WritePin(Buzzer_GPIO_Port, Buzzer_Pin, (on != 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
+static void HeaterTest_DisplayPower(void)
+{
+  uint8_t segments[4] = {SegmentForCharacter('H'), 0U, 0U, 0U};
+  uint8_t power = gHeaterTestPowerPercent;
+
+  if (power == 100U) {
+    segments[1] = SegmentForCharacter('1');
+    segments[2] = SegmentForCharacter('0');
+    segments[3] = SegmentForCharacter('0');
+  }
+  else {
+    segments[2] = SegmentForCharacter((char)('0' + (power / 10U)));
+    segments[3] = SegmentForCharacter('0');
+  }
+  tm1637DisplaySegments(&gDisplay1, segments);
+}
+
+static void HeaterTest_Start(uint32_t now)
+{
+  if (MainCycle_CheckStartConditions(now) == 0U || MainCycle_ReadTemperatureOrFail() == 0U) {
+    return;
+  }
+
+  gHeaterTestStartTick = now;
+  gHeaterTestLastSampleTick = now - HEATER_TEST_SAMPLE_MS;
+  gHeaterTestHeaderSent = USB_HOST_CDC_Write(
+      "elapsed_ms,power_percent,heater_on,temperature_c,status\r\n");
+  if (gHeaterTestHeaderSent == 0U) {
+    /* Never energize a heater when there is nowhere to record the result. */
+    SafetyOutputs_Stop();
+    return;
+  }
+
+  gHeaterTestRunning = 1U;
+  HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_SET);
+  Buzzer_Play(BUZZER_EVENT_START);
+}
+
+static void HeaterTest_Stop(const char *status, uint32_t now)
+{
+  if (gHeaterTestRunning != 0U) {
+    HeaterTest_LogSample(now, status);
+  }
+  gHeaterTestRunning = 0U;
+  gHeaterTestHeaterOn = 0U;
+  SafetyOutputs_Stop();
+  HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
+}
+
+static void HeaterTest_ApplyPower(uint32_t now)
+{
+  uint32_t elapsedInWindow = (now - gHeaterTestStartTick) % HEATER_TEST_WINDOW_MS;
+  uint32_t onTime = (HEATER_TEST_WINDOW_MS * gHeaterTestPowerPercent) / 100U;
+
+  gHeaterTestHeaterOn = (elapsedInWindow < onTime) ? 1U : 0U;
+  HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin,
+                    (gHeaterTestHeaterOn != 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(SSR_HResistor_GPIO_Port, SSR_HResistor_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(Relay_Pump_GPIO_Port, Relay_Pump_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(Relay_Valve1_GPIO_Port, Relay_Valve1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(Relay_Valve2_GPIO_Port, Relay_Valve2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(Relay_Valve3_GPIO_Port, Relay_Valve3_Pin, GPIO_PIN_SET);
+}
+
+static void HeaterTest_LogSample(uint32_t now, const char *status)
+{
+  char line[96];
+  int16_t temperature = gTemperatureTenthsC;
+
+  (void)snprintf(line, sizeof(line), "%lu,%u,%u,%d.%01d,%s\r\n",
+                 (unsigned long)(now - gHeaterTestStartTick),
+                 gHeaterTestPowerPercent, gHeaterTestHeaterOn,
+                 temperature / 10, (temperature < 0 ? -temperature : temperature) % 10,
+                 status);
+  (void)USB_HOST_CDC_Write(line);
+}
+
+static void HeaterTest_Process(uint32_t now)
+{
+  static const uint8_t powers[3] = {100U, 70U, 40U};
+  uint8_t startPressed;
+
+  for (uint8_t i = 0U; i < 3U; ++i) {
+    ButtonInput_Update(&gProgramButtons[i], now, PROGRAM_DEBOUNCE_MS,
+                       PROGRAM_LONG_PRESS_MS, PROGRAM_REPEAT_MS);
+    if (ButtonInput_ConsumePressed(&gProgramButtons[i]) != 0U &&
+        gHeaterTestRunning == 0U && StartupSafety_IsReady() != 0U) {
+      gHeaterTestPowerPercent = powers[i];
+      ProgramLeds_Set(i);
+      HeaterTest_DisplayPower();
+      Buzzer_Play(BUZZER_EVENT_BUTTON);
+    }
+  }
+
+  ButtonInput_Update(&gStartButton, now, PROGRAM_DEBOUNCE_MS,
+                     PROGRAM_LONG_PRESS_MS, PROGRAM_REPEAT_MS);
+  startPressed = ButtonInput_ConsumePressed(&gStartButton);
+  if (startPressed != 0U && gSafetyErrorActive != 0U) {
+    SafetyError_Clear();
+    StartupSafety_RequestRecheck(now);
+    Buzzer_Play(BUZZER_EVENT_BUTTON);
+  }
+  else if (startPressed != 0U && StartupSafety_IsReady() != 0U) {
+    if (gHeaterTestRunning != 0U) {
+      HeaterTest_Stop("STOP", now);
+      Buzzer_Play(BUZZER_EVENT_STOP);
+    }
+    else {
+      HeaterTest_Start(now);
+    }
+  }
+
+  if (gHeaterTestRunning == 0U) {
+    return;
+  }
+  if (MainCycle_CheckDoorOrFail() == 0U) {
+    HeaterTest_Stop("DOOR_ERROR", now);
+    return;
+  }
+  if ((now - gHeaterTestStartTick) >= HEATER_TEST_DURATION_MS) {
+    HeaterTest_Stop("DONE", now);
+    Buzzer_Play(BUZZER_EVENT_COMPLETE);
+    return;
+  }
+
+  HeaterTest_ApplyPower(now);
+  if (gHeaterTestHeaderSent == 0U) {
+    gHeaterTestHeaderSent = USB_HOST_CDC_Write(
+        "elapsed_ms,power_percent,heater_on,temperature_c,status\r\n");
+    return;
+  }
+  if ((now - gHeaterTestLastSampleTick) < HEATER_TEST_SAMPLE_MS) {
+    return;
+  }
+  if (Temperature_ReadFilteredTenthsC(&gTemperatureTenthsC) == 0U) {
+    SafetyError_Set(1U);
+    HeaterTest_Stop("SENSOR_ERROR", now);
+    return;
+  }
+  if (gTemperatureTenthsC > (int16_t)MAIN_OVER_TEMPERATURE_TENTHS) {
+    SafetyError_Set(5U);
+    HeaterTest_Stop("OVER_TEMP", now);
+    return;
+  }
+
+  gHeaterTestLastSampleTick = now;
+  tm1637DisplayDecimalTenths(&gDisplay2, gTemperatureTenthsC);
+  HeaterTest_LogSample(now, "RUN");
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -1736,6 +1905,8 @@ int main(void)
   TemperatureFilter_Reset();
   gSensorReady = Max31865_Begin(&gMax31865, MAX31865_2WIRE, 1U);
   StartupSafety_Init(HAL_GetTick());
+  ProgramLeds_Set(0U);
+  HeaterTest_DisplayPower();
 
   /* USER CODE END 2 */
 
@@ -1750,16 +1921,7 @@ int main(void)
     uint32_t now = HAL_GetTick();
     StartupSafety_Process(now);
     WaterLeds_Update();
-    StartButton_Process(now);
-    ProgramButtons_Process(now);
-    UserButtons_Process(now);
-    UserLed_Update();
-    ProgramDisplay_Update(now);
-    UserDisplay_Update(now);
-    MainCycle_Process(now);
-    TemperatureDisplay_Process(now);
-    MainCycleDisplay_Update(now);
-    MainCycleLeds_Update(now);
+    HeaterTest_Process(now);
     Buzzer_Process(now);
   }
   /* USER CODE END 3 */
