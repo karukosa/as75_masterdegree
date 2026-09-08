@@ -32,10 +32,45 @@ chép thay đổi sang một project STM32CubeIDE khác thay vì build trực ti
 này, cần thêm `heater_test_log.c` vào nhóm `Core/Src`/danh sách source của
 project; nếu không linker sẽ báo thiếu các hàm `HeaterTestLog_*`.
 
-### Thu thập hoàn toàn tự động sau khi nhấn START
+### Cách dễ nhất: để script tự mở GDB server
 
-Mở OpenOCD/ST-Link GDB server tại cổng mặc định `3333`, rồi **chạy lệnh dưới
-đây trước khi nhấn START**:
+Cài OpenOCD và GNU Arm GDB, cắm cáp USB vào cổng **ST-LINK** của bo, đóng phiên
+Debug đang mở trong STM32CubeIDE, rồi chạy lệnh sau **trước khi nhấn START**:
+
+```bash
+python3 tools/capture_ram_log.py \
+  --start-openocd --elf build/firmware.elf --csv step_70.csv
+```
+
+Tùy chọn `--start-openocd` tự chạy lệnh tương đương:
+
+```bash
+openocd -f interface/stlink.cfg -f target/stm32f4x.cfg
+```
+
+Khi thấy `Da ket noi SWD. Hay nhan START tren may.`, GDB server đã mở và có thể
+nhấn START. Không mở đồng thời cửa sổ Debug của CubeIDE vì mỗi lúc chỉ nên có
+một GDB client điều khiển bo. Nhấn `Ctrl+C` nếu muốn hủy chờ.
+
+Nếu máy báo không tìm thấy chương trình, truyền đường dẫn cụ thể, ví dụ:
+
+```bash
+python3 tools/capture_ram_log.py --start-openocd \
+  --openocd "C:/OpenOCD/bin/openocd.exe" \
+  --gdb "C:/GNUArmEmbedded/bin/arm-none-eabi-gdb.exe" \
+  --elf "Debug/ten_project.elf" --csv step_70.csv
+```
+
+### Nếu muốn tự mở server trong cửa sổ riêng
+
+Terminal 1:
+
+```bash
+openocd -f interface/stlink.cfg -f target/stm32f4x.cfg
+```
+
+Giữ Terminal 1 chạy. Khi thấy `Listening on port 3333 for gdb connections`, mở
+Terminal 2 và chạy (không thêm `--start-openocd`):
 
 ```bash
 python3 tools/capture_ram_log.py \
