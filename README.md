@@ -129,6 +129,21 @@ công tắc cửa được bỏ qua để phục vụ riêng cho phép đo thủ
 `WATER_CHECK_BYPASS_FOR_TEST` hoặc `DOOR_CHECK_BYPASS_FOR_TEST` về `0U` để bật
 lại từng liên động.
 
+## Lưu ý khi cập nhật project STM32CubeIDE
+
+Repo vẫn giữ các file PID và USB do project CubeIDE đã sinh có thể còn liệt kê chúng
+trong `Debug/*/subdir.mk`. Firmware thử nghiệm không gọi các module này, nhưng xóa file
+khỏi repo mà chưa xóa chúng khỏi cấu hình build sẽ làm incremental build thất bại.
+
+Khi chép mã vào project CubeIDE hiện có:
+
+1. Chỉ thay các file tương ứng trong `Core/`; không chép thêm một bản `Core/` hoặc
+   `USB_HOST/` vào bên trong `Middlewares/`.
+2. Nếu Project Explorer đang có các source trùng như `Middlewares/Core/Src/main.c`
+   hoặc `Middlewares/USB_HOST/Target/usbh_conf.c`, hãy xóa các bản trùng khỏi project.
+3. Chọn **Project > Clean...**, sau đó **Refresh** và build lại. Việc clean sẽ tạo
+   lại `subdir.mk`, tránh make tiếp tục biên dịch đường dẫn của file đã xóa hoặc di chuyển.
+
 ## Dựng biểu đồ, hàm truyền và PID
 
 Chạy công cụ không cần thư viện Python ngoài:
