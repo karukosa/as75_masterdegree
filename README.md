@@ -150,5 +150,5 @@ Trong đó `K` là độ tăng °C trên một đơn vị công suất (1.0 = 10
 gian trễ và `T` là hằng số thời gian. File SVG chồng đường đo và đường mô hình;
 file JSON chứa hệ số hàm truyền và `pid_kp`, `pid_ki_per_s`, `pid_kd_s` theo
 phương pháp IMC bảo thủ. Ba khóa bắt đầu bằng `firmware_pid_` đã được nhân 255
-để dùng với thư viện PID hiện tại (đầu ra 0..255). Đây chỉ là điểm khởi đầu: kiểm tra ở công suất thấp,
+để dùng trực tiếp với thang đầu ra 0..255 khi khôi phục điều khiển PID. Đây chỉ là điểm khởi đầu: kiểm tra ở công suất thấp,
 giới hạn đầu ra và giữ bảo vệ quá nhiệt khi đưa PID trở lại máy.
