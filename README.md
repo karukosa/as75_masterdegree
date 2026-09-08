@@ -6,21 +6,48 @@ công suất để dựng biểu đồ, nhận dạng hàm truyền và lấy b�
 
 ## Cách chạy thí nghiệm
 
-1. Nối bộ chuyển đổi USB CDC tương thích vào cổng USB Host của bo. Dữ liệu ra
-   có định dạng CSV ở tốc độ mặc định của thiết bị CDC.
+1. Nối ST-Link vào hai chân **SWDIO/SWCLK** đang dùng để nạp chương trình. Không
+   cần chân SWO, UART hay thay đổi phần cứng.
 2. Chờ kiểm tra PT100, nước và cửa hoàn tất.
 3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Màn hình 1 hiện `H100`,
    `H 70`, hoặc `H 40`; màn hình 2 hiện nhiệt độ.
-4. Bắt đầu ghi dữ liệu ở đầu bên kia của bộ chuyển đổi rồi nhấn **START**.
-   Firmware điều chế SSR theo cửa sổ 10 giây, lấy mẫu mỗi giây và tự dừng sau
-   45 phút. Nhấn START lần nữa để dừng sớm. Thanh đốt sẽ không được bật nếu
-   kết nối CDC chưa sẵn sàng nhận dòng tiêu đề CSV.
+4. Nhấn **START**. Firmware xóa log cũ trong RAM, điều chế SSR theo cửa sổ 10
+   giây, lấy mẫu mỗi giây và tự dừng sau 45 phút. Nhấn START lần nữa để dừng
+   sớm. Mảng `gHeaterTestLog` chứa tối đa 2702 mẫu (khoảng 32 KiB); trường
+   `complete` đổi thành 1 sau khi dừng.
 5. Để hệ thống nguội về cùng nhiệt độ ban đầu rồi mới chạy mức công suất kế
    tiếp. Nên lưu mỗi mức vào một file riêng (`step_100.csv`, `step_70.csv`,
    `step_40.csv`). Không vận hành thiết bị nếu các liên động an toàn chưa được
    kiểm chứng trên phần cứng thực.
 
-Dòng dữ liệu có dạng:
+## Chuyển log RAM lên máy qua SWD
+
+Sau khi thí nghiệm dừng, **không reset hoặc ngắt nguồn bo** vì log nằm trong
+RAM. Dùng GDB đi kèm STM32CubeIDE/OpenOCD, kết nối và halt CPU, rồi dump đúng
+biến toàn cục (thay `build/firmware.elf` bằng file ELF thực tế):
+
+```gdb
+arm-none-eabi-gdb build/firmware.elf
+(gdb) target extended-remote :3333
+(gdb) monitor halt
+(gdb) dump binary value heater_ram.bin gHeaterTestLog
+(gdb) detach
+```
+
+Lưu ý: không dùng `monitor reset halt`, vì startup sẽ xóa RAM log nếu chạy
+trước khi CPU được halt. Có thể dùng nút Pause của debugger thay cho
+`monitor halt`. Nếu debugger không hỗ trợ `dump binary value`,
+có thể dùng địa chỉ/kích thước mà GDB trả về từ `p &gHeaterTestLog` và
+`p sizeof(gHeaterTestLog)` với lệnh `dump binary memory`.
+
+Chuyển file nhị phân thành CSV:
+
+```bash
+python3 tools/extract_ram_log.py heater_ram.bin --csv step_70.csv
+```
+
+Script cũng chấp nhận một file dump toàn bộ SRAM vì nó tự tìm chữ ký
+`HTLOG001`. CSV xuất ra có dạng:
 
 ```csv
 elapsed_ms,power_percent,heater_on,temperature_c,status
