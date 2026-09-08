@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "usb_host.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -26,7 +25,7 @@
 #include "tm1637.h"
 #include "button_input.h"
 #include "pid.h"
-#include <stdio.h>
+#include "heater_test_log.h"
 
 /* USER CODE END Includes */
 
@@ -143,9 +142,11 @@ typedef struct {
 #define MAIN_HOLD_PID_OVERSHOOT_BOOST_ERROR_TENTHS 5
 #define MAIN_HOLD_PID_OVERSHOOT_OUTPUT 0.0
 #define WATER_FILL_TIMEOUT_MS (4U * MINUTE_MS)
-/* Temporary bypass so the cycle can be tested without the water sensor/check.
- * Set 0U to use real sensor*/
-#define WATER_CHECK_BYPASS_FOR_TEST 0U
+/* Heater-identification setup: water filling and door closing are manual.
+ * Set either value to 0U to restore its physical interlock. PT100 fault and
+ * over-temperature protection always remain active. */
+#define WATER_CHECK_BYPASS_FOR_TEST 1U
+#define DOOR_CHECK_BYPASS_FOR_TEST 1U
 #define HEATING_TIMEOUT_MS (35U * MINUTE_MS)
 #define MAIN_OVER_TEMPERATURE_TENTHS 1380U
 #define MAIN_CYCLE_LED_BLINK_MS 500U
@@ -155,11 +156,11 @@ typedef struct {
 #define TEMPERATURE_FILTER_ALPHA_DENOMINATOR 4
 #define TEMPERATURE_FILTER_MAX_STEP_TENTHS 50
 
-/* Heater identification mode. P1/P2/P3 select 100/70/40 %, START runs a
- * time-proportioned open-loop step test. The samples are CSV over USB CDC. */
-#define HEATER_TEST_SAMPLE_MS 1000U
+/* Heater identification mode. Samples stay in RAM and are retrieved over SWD. */
+#define HEATER_TEST_SAMPLE_MS 10000U
+#define HEATER_TEST_SAFETY_CHECK_MS 300U
 #define HEATER_TEST_WINDOW_MS 10000U
-#define HEATER_TEST_DURATION_MS (45U * MINUTE_MS)
+#define HEATER_TEST_DURATION_MS (25U * MINUTE_MS)
 
 /* USER CODE END PD */
 
@@ -219,10 +220,10 @@ static uint8_t gTemperatureFilterReady = 0U;
 static int16_t gFilteredTemperatureTenthsC = 0;
 static uint8_t gHeaterTestPowerPercent = 100U;
 static uint8_t gHeaterTestRunning = 0U;
-static uint8_t gHeaterTestHeaderSent = 0U;
 static uint8_t gHeaterTestHeaterOn = 0U;
 static uint32_t gHeaterTestStartTick = 0U;
 static uint32_t gHeaterTestLastSampleTick = 0U;
+static uint32_t gHeaterTestLastSafetyCheckTick = 0U;
 
 static const ProgramConfig programPresets[PROGRAM_COUNT] = {
   {1210U, 15U, 0U}, {1210U, 20U, 15U}, {1320U, 7U, 10U},
@@ -258,7 +259,6 @@ static const BuzzerPattern buzzerPatterns[BUZZER_EVENT_COUNT] = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI3_Init(void);
-void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
 static void DisplayErrorOnDisplay2(uint8_t code);
@@ -329,9 +329,9 @@ static void Buzzer_Process(uint32_t now);
 static void Buzzer_Set(uint8_t on);
 static void HeaterTest_Process(uint32_t now);
 static void HeaterTest_Start(uint32_t now);
-static void HeaterTest_Stop(const char *status, uint32_t now);
+static void HeaterTest_Stop(HeaterTestLogStatus status, uint32_t now);
 static void HeaterTest_ApplyPower(uint32_t now);
-static void HeaterTest_LogSample(uint32_t now, const char *status);
+static void HeaterTest_LogSample(uint32_t now, HeaterTestLogStatus status);
 static void HeaterTest_DisplayPower(void);
 
 /* USER CODE END PFP */
@@ -1463,7 +1463,11 @@ static void TemperatureFilter_Reset(void)
 
 static uint8_t DoorSwitch_IsClosed(void)
 {
+  #if DOOR_CHECK_BYPASS_FOR_TEST
+    return 1U;
+  #else
   return (HAL_GPIO_ReadPin(L_Switch_GPIO_Port, L_Switch_Pin) == GPIO_PIN_SET) ? 1U : 0U;
+  #endif
 }
 
 static uint8_t MainCycle_CheckDoorOrFail(void)
@@ -1723,20 +1727,15 @@ static void HeaterTest_Start(uint32_t now)
 
   gHeaterTestStartTick = now;
   gHeaterTestLastSampleTick = now - HEATER_TEST_SAMPLE_MS;
-  gHeaterTestHeaderSent = USB_HOST_CDC_Write(
-      "elapsed_ms,power_percent,heater_on,temperature_c,status\r\n");
-  if (gHeaterTestHeaderSent == 0U) {
-    /* Never energize a heater when there is nowhere to record the result. */
-    SafetyOutputs_Stop();
-    return;
-  }
+  gHeaterTestLastSafetyCheckTick = now - HEATER_TEST_SAFETY_CHECK_MS;
+  HeaterTestLog_Reset();
 
   gHeaterTestRunning = 1U;
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_SET);
   Buzzer_Play(BUZZER_EVENT_START);
 }
 
-static void HeaterTest_Stop(const char *status, uint32_t now)
+static void HeaterTest_Stop(HeaterTestLogStatus status, uint32_t now)
 {
   if (gHeaterTestRunning != 0U) {
     HeaterTest_LogSample(now, status);
@@ -1745,6 +1744,7 @@ static void HeaterTest_Stop(const char *status, uint32_t now)
   gHeaterTestHeaterOn = 0U;
   SafetyOutputs_Stop();
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
+  HeaterTestLog_MarkComplete();
 }
 
 static void HeaterTest_ApplyPower(uint32_t now)
@@ -1762,17 +1762,14 @@ static void HeaterTest_ApplyPower(uint32_t now)
   HAL_GPIO_WritePin(Relay_Valve3_GPIO_Port, Relay_Valve3_Pin, GPIO_PIN_SET);
 }
 
-static void HeaterTest_LogSample(uint32_t now, const char *status)
+static void HeaterTest_LogSample(uint32_t now, HeaterTestLogStatus status)
 {
-  char line[96];
-  int16_t temperature = gTemperatureTenthsC;
-
-  (void)snprintf(line, sizeof(line), "%lu,%u,%u,%d.%01d,%s\r\n",
-                 (unsigned long)(now - gHeaterTestStartTick),
-                 gHeaterTestPowerPercent, gHeaterTestHeaterOn,
-                 temperature / 10, (temperature < 0 ? -temperature : temperature) % 10,
-                 status);
-  (void)USB_HOST_CDC_Write(line);
+  if (HeaterTestLog_Append(now - gHeaterTestStartTick, gTemperatureTenthsC,
+                           gHeaterTestPowerPercent, gHeaterTestHeaterOn,
+                           status) == 0U) {
+    SafetyOutputs_Stop();
+    gHeaterTestRunning = 0U;
+  }
 }
 
 static void HeaterTest_Process(uint32_t now)
@@ -1802,7 +1799,7 @@ static void HeaterTest_Process(uint32_t now)
   }
   else if (startPressed != 0U && StartupSafety_IsReady() != 0U) {
     if (gHeaterTestRunning != 0U) {
-      HeaterTest_Stop("STOP", now);
+      HeaterTest_Stop(HEATER_LOG_STATUS_STOP, now);
       Buzzer_Play(BUZZER_EVENT_STOP);
     }
     else {
@@ -1814,38 +1811,37 @@ static void HeaterTest_Process(uint32_t now)
     return;
   }
   if (MainCycle_CheckDoorOrFail() == 0U) {
-    HeaterTest_Stop("DOOR_ERROR", now);
+    HeaterTest_Stop(HEATER_LOG_STATUS_DOOR_ERROR, now);
     return;
   }
   if ((now - gHeaterTestStartTick) >= HEATER_TEST_DURATION_MS) {
-    HeaterTest_Stop("DONE", now);
+    HeaterTest_Stop(HEATER_LOG_STATUS_DONE, now);
     Buzzer_Play(BUZZER_EVENT_COMPLETE);
     return;
   }
 
   HeaterTest_ApplyPower(now);
-  if (gHeaterTestHeaderSent == 0U) {
-    gHeaterTestHeaderSent = USB_HOST_CDC_Write(
-        "elapsed_ms,power_percent,heater_on,temperature_c,status\r\n");
+  if ((now - gHeaterTestLastSafetyCheckTick) < HEATER_TEST_SAFETY_CHECK_MS) {
     return;
   }
-  if ((now - gHeaterTestLastSampleTick) < HEATER_TEST_SAMPLE_MS) {
-    return;
-  }
+  gHeaterTestLastSafetyCheckTick = now;
   if (Temperature_ReadFilteredTenthsC(&gTemperatureTenthsC) == 0U) {
     SafetyError_Set(1U);
-    HeaterTest_Stop("SENSOR_ERROR", now);
+    HeaterTest_Stop(HEATER_LOG_STATUS_SENSOR_ERROR, now);
     return;
   }
   if (gTemperatureTenthsC > (int16_t)MAIN_OVER_TEMPERATURE_TENTHS) {
     SafetyError_Set(5U);
-    HeaterTest_Stop("OVER_TEMP", now);
+    HeaterTest_Stop(HEATER_LOG_STATUS_OVER_TEMP, now);
     return;
   }
 
-  gHeaterTestLastSampleTick = now;
   tm1637DisplayDecimalTenths(&gDisplay2, gTemperatureTenthsC);
-  HeaterTest_LogSample(now, "RUN");
+  if ((now - gHeaterTestLastSampleTick) < HEATER_TEST_SAMPLE_MS) {
+    return;
+  }
+  gHeaterTestLastSampleTick = now;
+  HeaterTest_LogSample(now, HEATER_LOG_STATUS_RUN);
 }
 
 /* USER CODE END 0 */
@@ -1878,7 +1874,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USB_HOST_Init();
   MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
   tm1637Init(&gDisplay1, TM1637_DISPLAY_1);
@@ -1915,8 +1910,6 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    MX_USB_HOST_Process();
-
     /* USER CODE BEGIN 3 */
     uint32_t now = HAL_GetTick();
     StartupSafety_Process(now);
