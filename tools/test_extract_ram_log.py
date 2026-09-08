@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 import extract_ram_log
+import capture_ram_log
 
 
 class ExtractRamLogTest(unittest.TestCase):
@@ -28,6 +29,14 @@ class ExtractRamLogTest(unittest.TestCase):
     def test_rejects_missing_magic(self):
         with self.assertRaisesRegex(ValueError, "HTLOG001"):
             extract_ram_log.decode(bytes(64))
+
+    def test_capture_waits_for_complete_then_dumps(self):
+        commands = capture_ram_log.build_gdb_commands(
+            Path("firmware.elf"), Path("heater.bin"), "localhost:3333"
+        )
+        self.assertIn("watch -l gHeaterTestLog.complete", commands)
+        self.assertIn("if gHeaterTestLog.complete == 1", commands)
+        self.assertIn("dump binary value \"heater.bin\" gHeaterTestLog", commands)
 
 
 if __name__ == "__main__":

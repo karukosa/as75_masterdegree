@@ -32,6 +32,29 @@ chép thay đổi sang một project STM32CubeIDE khác thay vì build trực ti
 này, cần thêm `heater_test_log.c` vào nhóm `Core/Src`/danh sách source của
 project; nếu không linker sẽ báo thiếu các hàm `HeaterTestLog_*`.
 
+### Thu thập hoàn toàn tự động sau khi nhấn START
+
+Mở OpenOCD/ST-Link GDB server tại cổng mặc định `3333`, rồi **chạy lệnh dưới
+đây trước khi nhấn START**:
+
+```bash
+python3 tools/capture_ram_log.py \
+  --elf build/firmware.elf --csv step_70.csv
+```
+
+Script kết nối qua SWD, cho CPU chạy và chờ cờ `gHeaterTestLog.complete`. Sau
+khi người vận hành nhấn START, toàn bộ các bước lấy mẫu 10 giây/lần, lưu RAM,
+chờ đủ 25 phút (hoặc chờ lỗi/dừng sớm), halt CPU, dump RAM và tạo CSV đều tự
+động. Không cần nhấn Pause hay nhập thêm lệnh GDB. Tùy chọn
+`--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
+không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
+
+STM32 không thể tự gửi dữ liệu chỉ qua dây SWD nếu trên máy tính không có một
+GDB server và chương trình đang chờ nhận; vì vậy chỉ cần khởi chạy script một
+lần trước thí nghiệm, sau đó thao tác duy nhất trên thiết bị là nhấn START.
+
+### Trích xuất thủ công khi cần
+
 Sau khi thí nghiệm dừng, **không reset hoặc ngắt nguồn bo** vì log nằm trong
 RAM. Dùng GDB đi kèm STM32CubeIDE/OpenOCD, kết nối và halt CPU, rồi dump đúng
 biến toàn cục (thay `build/firmware.elf` bằng file ELF thực tế):
