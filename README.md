@@ -6,7 +6,7 @@ công suất để dựng biểu đồ, nhận dạng hàm truyền và lấy b�
 
 ## Bảng chân để tạo project mới
 
-Các bảng dưới đây được đối chiếu trực tiếp với `main.h`, `MX_GPIO_Init()` và
+Bảng dưới đây được đối chiếu trực tiếp với `main.h`, `MX_GPIO_Init()` và
 `HAL_SPI_MspInit()`. Tên chân ở cột đầu nên được đặt lại đúng như bảng trong
 STM32CubeMX/CubeIDE; khi đó có thể chép các file chương trình đã lưu mà không
 phải sửa lại tên chân trong mã nguồn.
@@ -23,22 +23,13 @@ phải sửa lại tên chân trong mã nguồn.
 | `LD_P2` | PD1 | GPIO Output, Push-pull, Low speed, No pull | LED mức 70%, bật mức cao |
 | `LD_P3` | PD0 | GPIO Output, Push-pull, Low speed, No pull | LED mức 40%, bật mức cao |
 | `LD_Start` | PD6 | GPIO Output, Push-pull, Low speed, No pull | LED đang chạy, bật mức cao |
-| `LD_Alarm` | PE7 | GPIO Output, Push-pull, Low speed, No pull | LED báo lỗi, bật mức cao |
-| `LD_LW` | PE8 | GPIO Output, Push-pull, Low speed, No pull | LED báo có nước, bật mức cao |
-| `LD_HW` | PE9 | GPIO Output, Push-pull, Low speed, No pull | LED báo thiếu nước, bật mức cao |
 | `SSR_Heater` | PE10 | GPIO Output, Push-pull, Low speed, No pull | SSR thanh đốt, bật mức cao |
-| `SSR_HResistor` | PE11 | GPIO Output, Push-pull, Low speed, No pull | Ngõ SSR phụ; firmware giữ tắt |
-| `Relay_Valve1` | PE12 | GPIO Output, Push-pull, Low speed, No pull | Van 1; dùng lúc kiểm tra an toàn rồi tắt |
-| `Relay_Valve2` | PE13 | GPIO Output, Push-pull, Low speed, No pull | Van 2; firmware giữ tắt |
-| `Relay_Valve3` | PE14 | GPIO Output, Push-pull, Low speed, No pull | Van 3, bật trong lúc chạy phép đo |
-| `Relay_Pump` | PD8 | GPIO Output, Push-pull, Low speed, No pull | Bơm; firmware giữ tắt |
 | `Buzzer` | PB10 | GPIO Output, Push-pull, Low speed, No pull | Còi, bật mức cao |
-| `Water_S` | PB12 | GPIO Input, No pull | Cảm biến nước, có nước ở mức thấp; hiện đang bypass |
-| `L_Switch` | PB13 | GPIO Input, No pull | Công tắc cửa, cửa đóng ở mức cao; hiện đang bypass |
 | `CLK1` / `DIO1` | PB6 / PB7 | GPIO Output Open-drain, Pull-up, Very high speed | Màn hình TM1637 số 1 (mức công suất) |
 | `CLK2` / `DIO2` | PB8 / PB9 | GPIO Output Open-drain, Pull-up, Very high speed | Màn hình TM1637 số 2 (nhiệt độ) |
 | `CS` | PA4 | GPIO Output, Push-pull, Low speed, No pull | Chip-select MAX31865, phần mềm điều khiển |
 | SPI3 SCK / MISO / MOSI | PB3 / PB4 / PB5 | AF6 SPI3, Push-pull, Very high speed, No pull | Giao tiếp MAX31865/PT100 |
+| `BOOT1` | PB2 | GPIO Input, No pull | Chân khởi động mặc định của bo mạch, giữ nguyên cấu hình |
 | SWDIO / SWCLK | PA13 / PA14 | SYS Debug: Serial Wire | Nạp, debug và đọc log RAM qua ST-Link |
 | OSC_IN / OSC_OUT | PH0 / PH1 | RCC HSE Crystal/Ceramic Resonator | Thạch anh HSE 8 MHz |
 
@@ -46,24 +37,10 @@ SPI3 phải đặt ở chế độ **Master, Full-Duplex, 8-bit, CPOL Low, CPHA 
 Edge, Software NSS, MSB first, prescaler 128**. Clock dùng HSE 8 MHz và PLL
 `M=8, N=336, P=2, Q=7`, tạo SYSCLK 168 MHz; APB1 chia 4 và APB2 chia 2.
 
-### Chân vẫn được khởi tạo nhưng phép đo hiện tại không điều khiển
-
-Các chân dưới đây vẫn có trong `MX_GPIO_Init()`. Có thể cấu hình lại để giữ
-tương thích với toàn bộ bo mạch, hoặc bỏ khỏi project mới nếu chắc chắn chỉ
-dùng firmware thí nghiệm hiện tại.
-
-| Nhóm | Chân MCU | Cấu hình hiện tại |
-|---|---|---|
-| `B_P4`, `B_P5`, `B_P6` | PC3, PC4, PC5 | GPIO Input, No pull |
-| `B_Set`, `B_Up`, `B_Down`, `B_User` | PC7, PC8, PC9, PC12 | GPIO Input, No pull |
-| `B1` | PA0 | GPIO Event Rising, No pull |
-| `BOOT1` | PB2 | GPIO Input, No pull |
-| `LD_P4`, `LD_P5`, `LD_P6`, `LD_User` | PD3, PD4, PD5, PD7 | GPIO Output Push-pull, Low speed, No pull |
-| `LD4`, `LD3`, `LD5`, `LD6` | PD12, PD13, PD14, PD15 | GPIO Output Push-pull, Low speed, No pull |
-| `LD_C1` ... `LD_C7` | PE0 ... PE6 | GPIO Output Push-pull, Low speed, No pull |
-
-PA9--PA12 (USB OTG FS) và PC14--PC15 (LSE) chỉ có nhãn trong `main.h`; firmware
-hiện tại **không khởi tạo ngoại vi USB/LSE và không dùng các chân này**.
+`MX_GPIO_Init()` chỉ khởi tạo các GPIO phục vụ phép đo trong bảng và `BOOT1`
+mặc định. Các nút, LED, cảm biến nước/cửa, SSR phụ, relay và bơm không tham gia
+phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE không dùng cũng
+đã được xóa khỏi `main.h` để danh sách chân khớp với firmware thí nghiệm.
 
 ### Chép chương trình sang project mới
 
@@ -86,7 +63,7 @@ hiện tại **không khởi tạo ngoại vi USB/LSE và không dùng các châ
 1. Nối ST-Link vào hai chân **SWDIO/SWCLK** đang dùng để nạp chương trình. Không
    cần chân SWO, UART hay thay đổi phần cứng.
 2. Cấp nước và đóng cửa thủ công, sau đó chờ kiểm tra PT100 hoàn tất. Firmware
-   thí nghiệm này bỏ qua hai tín hiệu cảm biến mức nước và công tắc cửa.
+   thí nghiệm không đọc cảm biến mức nước hoặc công tắc cửa.
 3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Màn hình 1 hiện `H100`,
    `H 70`, hoặc `H 40`; màn hình 2 hiện nhiệt độ.
 4. Nhấn **START**. Firmware xóa log cũ trong RAM, điều chế SSR theo cửa sổ 10
@@ -201,10 +178,8 @@ elapsed_ms,power_percent,heater_on,temperature_c,status
 
 `heater_on` cho biết trạng thái SSR thực tế trong cửa sổ điều chế. Dù chỉ lưu
 một mẫu mỗi 10 giây, firmware vẫn đọc PT100 mỗi 300 ms và ngắt thanh đốt khi
-PT100 lỗi hoặc nhiệt độ vượt 138 °C; cảm biến mức nước và
-công tắc cửa được bỏ qua để phục vụ riêng cho phép đo thủ công này. Có thể đặt
-`WATER_CHECK_BYPASS_FOR_TEST` hoặc `DOOR_CHECK_BYPASS_FOR_TEST` về `0U` để bật
-lại từng liên động.
+PT100 lỗi hoặc nhiệt độ vượt 138 °C. Firmware không cấu hình cảm biến mức nước
+và công tắc cửa, nên người vận hành phải tự kiểm tra hai điều kiện này.
 
 ## Lưu ý khi cập nhật project STM32CubeIDE
 

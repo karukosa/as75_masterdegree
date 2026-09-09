@@ -16,9 +16,6 @@
 #define BUTTON_LONG_PRESS_MS 1000U
 #define BUTTON_REPEAT_MS 500U
 #define MINUTE_MS 60000U
-#define WATER_FILL_TIMEOUT_MS (4U * MINUTE_MS)
-#define WATER_CHECK_BYPASS_FOR_TEST 1U
-#define DOOR_CHECK_BYPASS_FOR_TEST 1U
 #define OVER_TEMPERATURE_TENTHS 1380U
 #define TEMPERATURE_FILTER_ALPHA_NUMERATOR 1
 #define TEMPERATURE_FILTER_ALPHA_DENOMINATOR 4
@@ -35,7 +32,6 @@ typedef struct {
 
 typedef enum {
   STARTUP_SAFETY_CHECK_PT100 = 0,
-  STARTUP_SAFETY_FILL_WATER,
   STARTUP_SAFETY_READY,
   STARTUP_SAFETY_ERROR
 } StartupSafetyState;
@@ -77,7 +73,6 @@ static int16_t temperatureTenthsC;
 static uint8_t sensorReady;
 static uint8_t safetyErrorActive;
 static StartupSafetyState startupSafetyState;
-static uint32_t startupSafetyStartTick;
 static BuzzerSequence buzzer;
 static uint8_t temperatureFilterReady;
 static int16_t filteredTemperatureTenthsC;
@@ -187,39 +182,9 @@ static uint8_t Temperature_Read(int16_t *temperature)
   return 1U;
 }
 
-static uint8_t WaterSensor_HasWater(void)
-{
-#if WATER_CHECK_BYPASS_FOR_TEST
-  return 1U;
-#else
-  return (HAL_GPIO_ReadPin(Water_S_GPIO_Port, Water_S_Pin) == GPIO_PIN_RESET) ? 1U : 0U;
-#endif
-}
-
-static uint8_t DoorSwitch_IsClosed(void)
-{
-#if DOOR_CHECK_BYPASS_FOR_TEST
-  return 1U;
-#else
-  return (HAL_GPIO_ReadPin(L_Switch_GPIO_Port, L_Switch_Pin) == GPIO_PIN_SET) ? 1U : 0U;
-#endif
-}
-
-static void WaterLeds_Update(void)
-{
-  uint8_t hasWater = WaterSensor_HasWater();
-  HAL_GPIO_WritePin(LD_HW_GPIO_Port, LD_HW_Pin, hasWater ? GPIO_PIN_RESET : GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LD_LW_GPIO_Port, LD_LW_Pin, hasWater ? GPIO_PIN_SET : GPIO_PIN_RESET);
-}
-
 static void SafetyOutputs_Stop(void)
 {
   HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(SSR_HResistor_GPIO_Port, SSR_HResistor_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(Relay_Pump_GPIO_Port, Relay_Pump_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(Relay_Valve1_GPIO_Port, Relay_Valve1_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(Relay_Valve2_GPIO_Port, Relay_Valve2_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(Relay_Valve3_GPIO_Port, Relay_Valve3_Pin, GPIO_PIN_RESET);
 }
 
 static void SafetyError_Set(uint8_t code)
@@ -227,7 +192,6 @@ static void SafetyError_Set(uint8_t code)
   safetyErrorActive = 1U;
   SafetyOutputs_Stop();
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(LD_Alarm_GPIO_Port, LD_Alarm_Pin, GPIO_PIN_SET);
   DisplayError(code);
   Buzzer_Play(BUZZER_EVENT_ERROR);
 }
@@ -235,7 +199,6 @@ static void SafetyError_Set(uint8_t code)
 static void SafetyError_Clear(void)
 {
   safetyErrorActive = 0U;
-  HAL_GPIO_WritePin(LD_Alarm_GPIO_Port, LD_Alarm_Pin, GPIO_PIN_RESET);
   Buzzer_Play(BUZZER_EVENT_OFF);
 }
 
@@ -256,48 +219,30 @@ static uint8_t Temperature_Check(void)
 static void StartupSafety_SetReady(void)
 {
   SafetyOutputs_Stop();
-  WaterLeds_Update();
   startupSafetyState = STARTUP_SAFETY_READY;
   HeaterTest_DisplayPower();
   Buzzer_Play(BUZZER_EVENT_READY);
 }
 
-static void StartupSafety_Process(uint32_t now)
+static void StartupSafety_Process(void)
 {
   if (startupSafetyState == STARTUP_SAFETY_READY ||
       startupSafetyState == STARTUP_SAFETY_ERROR) {
     return;
   }
 
-  WaterLeds_Update();
-  if (startupSafetyState == STARTUP_SAFETY_CHECK_PT100) {
-    SafetyOutputs_Stop();
-    if (Temperature_Check() == 0U) {
-      startupSafetyState = STARTUP_SAFETY_ERROR;
-    } else if (WaterSensor_HasWater() != 0U) {
-      StartupSafety_SetReady();
-    } else {
-      HAL_GPIO_WritePin(Relay_Valve1_GPIO_Port, Relay_Valve1_Pin, GPIO_PIN_SET);
-      startupSafetyState = STARTUP_SAFETY_FILL_WATER;
-      startupSafetyStartTick = now;
-    }
-  } else if (WaterSensor_HasWater() != 0U) {
-    HAL_GPIO_WritePin(Relay_Valve1_GPIO_Port, Relay_Valve1_Pin, GPIO_PIN_SET);
-    HAL_Delay(5000U);
+  SafetyOutputs_Stop();
+  if (Temperature_Check() != 0U) {
     StartupSafety_SetReady();
-  } else if ((now - startupSafetyStartTick) >= WATER_FILL_TIMEOUT_MS) {
-    SafetyError_Set(2U);
-    startupSafetyState = STARTUP_SAFETY_ERROR;
   } else {
-    HAL_GPIO_WritePin(Relay_Valve1_GPIO_Port, Relay_Valve1_Pin, GPIO_PIN_SET);
+    startupSafetyState = STARTUP_SAFETY_ERROR;
   }
 }
 
-static void StartupSafety_RequestRecheck(uint32_t now)
+static void StartupSafety_RequestRecheck(void)
 {
   startupSafetyState = STARTUP_SAFETY_CHECK_PT100;
-  startupSafetyStartTick = now;
-  StartupSafety_Process(now);
+  StartupSafety_Process();
 }
 
 static void Buzzer_Set(uint8_t on)
@@ -388,14 +333,6 @@ static void HeaterTest_Stop(HeaterTestLogStatus status, uint32_t now)
 static void HeaterTest_Start(uint32_t now)
 {
   SafetyOutputs_Stop();
-  if (DoorSwitch_IsClosed() == 0U) {
-    SafetyError_Set(3U);
-    return;
-  }
-  if (WaterSensor_HasWater() == 0U) {
-    StartupSafety_RequestRecheck(now);
-    return;
-  }
   if (Temperature_Check() == 0U) {
     return;
   }
@@ -417,7 +354,6 @@ static void HeaterTest_ApplyPower(uint32_t now)
   heaterTestHeaterOn = (elapsed < onTime) ? 1U : 0U;
   HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin,
                     heaterTestHeaterOn ? GPIO_PIN_SET : GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(Relay_Valve3_GPIO_Port, Relay_Valve3_Pin, GPIO_PIN_SET);
 }
 
 static void HeaterTest_Process(uint32_t now)
@@ -443,7 +379,7 @@ static void HeaterTest_Process(uint32_t now)
   startPressed = ButtonInput_ConsumePressed(&startButton);
   if (startPressed != 0U && safetyErrorActive != 0U) {
     SafetyError_Clear();
-    StartupSafety_RequestRecheck(now);
+    StartupSafety_RequestRecheck();
     Buzzer_Play(BUZZER_EVENT_BUTTON);
   } else if (startPressed != 0U && startupSafetyState == STARTUP_SAFETY_READY) {
     if (heaterTestRunning != 0U) {
@@ -455,11 +391,6 @@ static void HeaterTest_Process(uint32_t now)
   }
 
   if (heaterTestRunning == 0U) {
-    return;
-  }
-  if (DoorSwitch_IsClosed() == 0U) {
-    SafetyError_Set(3U);
-    HeaterTest_Stop(HEATER_LOG_STATUS_DOOR_ERROR, now);
     return;
   }
   if ((now - heaterTestStartTick) >= HEATER_TEST_DURATION_MS) {
@@ -500,21 +431,18 @@ int main(void)
   Buttons_Init();
   PowerLed_Select(0U);
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(LD_Alarm_GPIO_Port, LD_Alarm_Pin, GPIO_PIN_RESET);
   SafetyOutputs_Stop();
 
   Max31865_Init(&max31865, &hspi3, CS_GPIO_Port, CS_Pin, 430.0f, 100.0f);
   temperatureFilterReady = 0U;
   sensorReady = Max31865_Begin(&max31865, MAX31865_2WIRE, 1U);
   startupSafetyState = STARTUP_SAFETY_CHECK_PT100;
-  startupSafetyStartTick = HAL_GetTick();
-  StartupSafety_Process(startupSafetyStartTick);
+  StartupSafety_Process();
   HeaterTest_DisplayPower();
 
   while (1) {
     uint32_t now = HAL_GetTick();
-    StartupSafety_Process(now);
-    WaterLeds_Update();
+    StartupSafety_Process();
     HeaterTest_Process(now);
     Buzzer_Process(now);
   }
@@ -617,16 +545,12 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, LD_C3_Pin|LD_C4_Pin|LD_C5_Pin|LD_C6_Pin
-                          |LD_C7_Pin|LD_Alarm_Pin|LD_LW_Pin|LD_HW_Pin
-                          |SSR_Heater_Pin|SSR_HResistor_Pin|Relay_Valve1_Pin|Relay_Valve2_Pin
-                          |Relay_Valve3_Pin|LD_C1_Pin|LD_C2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
@@ -636,39 +560,21 @@ static void MX_GPIO_Init(void)
                           |DIO2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, Relay_Pump_Pin|LD4_Pin|LD3_Pin|LD5_Pin
-                          |LD6_Pin|LD_P3_Pin|LD_P2_Pin|LD_P1_Pin
-                          |LD_P4_Pin|LD_P5_Pin|LD_P6_Pin|LD_Start_Pin
-                          |LD_User_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, LD_P3_Pin|LD_P2_Pin|LD_P1_Pin|LD_Start_Pin,
+                    GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : LD_C3_Pin LD_C4_Pin LD_C5_Pin LD_C6_Pin
-                           LD_C7_Pin LD_Alarm_Pin LD_LW_Pin LD_HW_Pin
-                           SSR_Heater_Pin SSR_HResistor_Pin Relay_Valve1_Pin Relay_Valve2_Pin
-                           Relay_Valve3_Pin LD_C1_Pin LD_C2_Pin */
-  GPIO_InitStruct.Pin = LD_C3_Pin|LD_C4_Pin|LD_C5_Pin|LD_C6_Pin
-                          |LD_C7_Pin|LD_Alarm_Pin|LD_LW_Pin|LD_HW_Pin
-                          |SSR_Heater_Pin|SSR_HResistor_Pin|Relay_Valve1_Pin|Relay_Valve2_Pin
-                          |Relay_Valve3_Pin|LD_C1_Pin|LD_C2_Pin;
+  /*Configure GPIO pin : SSR_Heater_Pin */
+  GPIO_InitStruct.Pin = SSR_Heater_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : B_P1_Pin B_P2_Pin B_P3_Pin B_P4_Pin
-                           B_P5_Pin B_P6_Pin B_Start_Pin B_Set_Pin
-                           B_Up_Pin B_Down_Pin B_User_Pin */
-  GPIO_InitStruct.Pin = B_P1_Pin|B_P2_Pin|B_P3_Pin|B_P4_Pin
-                          |B_P5_Pin|B_P6_Pin|B_Start_Pin|B_Set_Pin
-                          |B_Up_Pin|B_Down_Pin|B_User_Pin;
+  /*Configure GPIO pins : B_P1_Pin B_P2_Pin B_P3_Pin B_Start_Pin */
+  GPIO_InitStruct.Pin = B_P1_Pin|B_P2_Pin|B_P3_Pin|B_Start_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CS_Pin */
   GPIO_InitStruct.Pin = CS_Pin;
@@ -677,8 +583,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BOOT1_Pin Water_S_Pin L_Switch_Pin */
-  GPIO_InitStruct.Pin = BOOT1_Pin|Water_S_Pin|L_Switch_Pin;
+  /*Configure GPIO pin : BOOT1_Pin */
+  GPIO_InitStruct.Pin = BOOT1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -692,14 +598,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Relay_Pump_Pin LD4_Pin LD3_Pin LD5_Pin
-                           LD6_Pin LD_P3_Pin LD_P2_Pin LD_P1_Pin
-                           LD_P4_Pin LD_P5_Pin LD_P6_Pin LD_Start_Pin
-                           LD_User_Pin */
-  GPIO_InitStruct.Pin = Relay_Pump_Pin|LD4_Pin|LD3_Pin|LD5_Pin
-                          |LD6_Pin|LD_P3_Pin|LD_P2_Pin|LD_P1_Pin
-                          |LD_P4_Pin|LD_P5_Pin|LD_P6_Pin|LD_Start_Pin
-                          |LD_User_Pin;
+  /*Configure GPIO pins : LD_P3_Pin LD_P2_Pin LD_P1_Pin LD_Start_Pin */
+  GPIO_InitStruct.Pin = LD_P3_Pin|LD_P2_Pin|LD_P1_Pin|LD_Start_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
