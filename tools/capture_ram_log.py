@@ -13,7 +13,10 @@ from extract_ram_log import decode
 
 
 def _gdb_quote(path: Path) -> str:
-    return '"' + str(path).replace("\\", "\\\\").replace('"', '\\"') + '"'
+    # GDB accepts forward slashes on Windows.  Using them avoids GDB treating
+    # backslashes in a quoted filename as escape characters (for example,
+    # ``\\t`` in a directory name), which can make an existing path look absent.
+    return '"' + str(path).replace("\\", "/").replace('"', '\\"') + '"'
 
 
 def build_gdb_commands(elf: Path, dump: Path, target: str) -> str:

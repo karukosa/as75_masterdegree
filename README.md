@@ -142,6 +142,8 @@ Các thư mục cha trong đường dẫn `--csv` và `--keep-dump` sẽ đượ
 Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/step_100.csv --keep-dump
 data/heater_ram_100.bin`, kể cả khi thư mục `data` chưa tồn tại. Điều này cũng
 đảm bảo GDB ghi được dump khi nhấn START lần nữa để dừng thí nghiệm sớm.
+Trên Windows, script tự chuyển đường dẫn gửi cho GDB sang dấu `/`; file `.bat`
+vẫn có thể truyền đường dẫn bằng dấu `\\` như bình thường.
 
 STM32 không thể tự gửi dữ liệu chỉ qua dây SWD nếu trên máy tính không có một
 GDB server và chương trình đang chờ nhận; vì vậy chỉ cần khởi chạy script một
