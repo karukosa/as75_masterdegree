@@ -3,6 +3,7 @@
 
 import argparse
 import csv
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -23,6 +24,7 @@ def build_gdb_commands(elf: Path, dump: Path, target: str) -> str:
     """Build a batch GDB program which waits for complete to change to one."""
     return f"""set pagination off
 set confirm off
+set remotetimeout 5
 file {_gdb_quote(elf)}
 target extended-remote {target}
 monitor halt
@@ -100,20 +102,34 @@ def main() -> int:
 
         with tempfile.TemporaryDirectory(prefix="heater-log-") as temporary:
             temporary_path = Path(temporary)
-            dump = args.keep_dump.resolve() if args.keep_dump else temporary_path / "heater_ram.bin"
-            # GDB's `dump binary value` does not create parent directories.  Create
-            # it before starting GDB so an early STOP can always be captured.
-            dump.parent.mkdir(parents=True, exist_ok=True)
+            # Let GDB write a simple relative name inside an existing temporary
+            # directory. Some Windows GDB builds reject even valid absolute paths.
+            dump_name = Path("heater_ram.bin")
+            dump = temporary_path / dump_name
             command_file = temporary_path / "capture.gdb"
             command_file.write_text(
-                build_gdb_commands(args.elf.resolve(), dump, args.target), encoding="utf-8"
+                build_gdb_commands(args.elf.resolve(), dump_name, args.target), encoding="utf-8"
             )
+            gdb = Path(args.gdb)
+            gdb_command = str(gdb.resolve()) if gdb.is_file() else args.gdb
             try:
-                subprocess.run([args.gdb, "--batch", "-x", str(command_file)], check=True)
+                subprocess.run(
+                    [gdb_command, "--batch", "-x", "capture.gdb"],
+                    check=True,
+                    cwd=temporary_path,
+                )
             except FileNotFoundError:
                 parser.error(f"không tìm thấy GDB: {args.gdb}")
             except subprocess.CalledProcessError as exc:
                 parser.error(f"GDB kết thúc với mã lỗi {exc.returncode}")
+
+            if args.keep_dump:
+                kept_dump = args.keep_dump.resolve()
+                kept_dump.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.copyfile(dump, kept_dump)
+                except OSError as exc:
+                    parser.error(f"không thể lưu file dump: {exc}")
 
             try:
                 rows, complete, _, capacity = decode(dump.read_bytes())

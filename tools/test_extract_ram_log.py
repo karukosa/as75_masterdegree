@@ -3,6 +3,7 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path, PureWindowsPath
+from unittest import mock
 
 import extract_ram_log
 import capture_ram_log
@@ -35,6 +36,7 @@ class ExtractRamLogTest(unittest.TestCase):
             Path("firmware.elf"), Path("heater.bin"), "localhost:3333"
         )
         self.assertIn("watch -l gHeaterTestLog.complete", commands)
+        self.assertIn("set remotetimeout 5", commands)
         self.assertIn("if gHeaterTestLog.complete == 1", commands)
         self.assertIn("dump binary value \"heater.bin\" gHeaterTestLog", commands)
 
@@ -66,6 +68,38 @@ class ExtractRamLogTest(unittest.TestCase):
                         ["0", "100", "1", "25.0", "STOP"],
                     ],
                 )
+
+    def test_capture_dumps_to_temporary_working_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            elf = root / "firmware.elf"
+            elf.write_bytes(b"ELF")
+            kept_dump = root / "missing" / "data" / "heater_ram_70.bin"
+            csv_path = root / "data" / "step_70.csv"
+            ram = (
+                extract_ram_log.HEADER.pack(
+                    extract_ram_log.MAGIC, 1, extract_ram_log.SAMPLE.size, 151, 0, 1
+                )
+            )
+
+            def fake_run(command, check, cwd):
+                self.assertEqual(command[-2:], ["-x", "capture.gdb"])
+                self.assertTrue(check)
+                gdb_commands = (cwd / "capture.gdb").read_text(encoding="utf-8")
+                self.assertIn('dump binary value "heater_ram.bin"', gdb_commands)
+                self.assertNotIn(str(kept_dump), gdb_commands)
+                (cwd / "heater_ram.bin").write_bytes(ram)
+
+            argv = [
+                "capture_ram_log.py", "--elf", str(elf), "--csv", str(csv_path),
+                "--keep-dump", str(kept_dump),
+            ]
+            with mock.patch.object(capture_ram_log.subprocess, "run", side_effect=fake_run), \
+                    mock.patch("sys.argv", argv):
+                self.assertEqual(capture_ram_log.main(), 0)
+
+            self.assertEqual(kept_dump.read_bytes(), ram)
+            self.assertTrue(csv_path.is_file())
 
 
 if __name__ == "__main__":
