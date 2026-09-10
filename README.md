@@ -138,14 +138,6 @@ chờ đủ 35 phút (hoặc chờ lỗi/dừng sớm), halt CPU, dump RAM và t
 `--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
 không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
 
-Sau một lần chạy đủ 35 phút, dòng tổng kết phải có dạng `.../211 bản ghi`. Nếu
-vẫn hiện `.../151`, bo đang chạy firmware 25 phút cũ hoặc file `.bat` đang truyền
-đường dẫn tới file ELF cũ. Hãy **Clean/Rebuild**, nạp lại firmware vừa build và
-kiểm tra đối số `--elf` trong file `.bat`. Con số phía trước là số bản ghi thực
-tế; ví dụ `144/151` nghĩa là CSV có 144 bản ghi trong bộ đệm firmware cũ có sức
-chứa 151, không phải dữ liệu đủ 35 phút. Xem cột `status` ở dòng cuối CSV để biết
-thí nghiệm kết thúc bình thường (`DONE`), bị dừng tay (`STOP`) hay gặp lỗi.
-
 Các thư mục cha trong đường dẫn `--csv` và `--keep-dump` sẽ được tạo tự động.
 Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/step_100.csv --keep-dump
 data/heater_ram_100.bin`, kể cả khi thư mục `data` chưa tồn tại. Điều này cũng
