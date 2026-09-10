@@ -145,8 +145,9 @@ data/heater_ram_100.bin`, kể cả khi thư mục `data` chưa tồn tại. Đi
 Trên Windows, script tự chuyển đường dẫn gửi cho GDB sang dấu `/`; file `.bat`
 vẫn có thể truyền đường dẫn bằng dấu `\\` như bình thường.
 Để tương thích cả các bản GDB không ghi được đường dẫn Windows tuyệt đối,
-script yêu cầu GDB ghi tên ngắn `heater_ram.bin` trong một thư mục tạm có sẵn,
-sau đó dùng Python sao chép file sang đường dẫn `--keep-dump`.
+script yêu cầu GDB ghi tên ngắn không có dấu nháy (`heater_ram.bin`) trong một
+thư mục tạm có sẵn, sau đó dùng Python sao chép file sang đường dẫn
+`--keep-dump`.
 
 STM32 không thể tự gửi dữ liệu chỉ qua dây SWD nếu trên máy tính không có một
 GDB server và chương trình đang chờ nhận; vì vậy chỉ cần khởi chạy script một

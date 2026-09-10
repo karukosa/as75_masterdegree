@@ -22,6 +22,9 @@ def _gdb_quote(path: Path) -> str:
 
 def build_gdb_commands(elf: Path, dump: Path, target: str) -> str:
     """Build a batch GDB program which waits for complete to change to one."""
+    dump_text = str(dump)
+    if any(character.isspace() for character in dump_text) or '"' in dump_text:
+        raise ValueError("tên file dump nội bộ của GDB không được chứa khoảng trắng hoặc dấu nháy")
     return f"""set pagination off
 set confirm off
 set remotetimeout 5
@@ -32,7 +35,7 @@ watch -l gHeaterTestLog.complete
 commands
   silent
   if gHeaterTestLog.complete == 1
-    dump binary value {_gdb_quote(dump)} gHeaterTestLog
+    dump binary value {dump_text} gHeaterTestLog
     printf "\\nDa nhan du log RAM.\\n"
     detach
     quit
