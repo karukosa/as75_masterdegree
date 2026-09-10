@@ -67,10 +67,10 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
 3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Màn hình 1 hiện `H100`,
    `H 70`, hoặc `H 40`; màn hình 2 hiện nhiệt độ.
 4. Nhấn **START**. Firmware xóa log cũ trong RAM, điều chế SSR theo cửa sổ 10
-   giây, **ghi một mẫu mỗi 10 giây** và tự dừng sau **25 phút**. Nhấn START lần
-   nữa để dừng sớm. Mảng `gHeaterTestLog` chứa tối đa 151 bản ghi (mẫu tại
+   giây, **ghi một mẫu mỗi 10 giây** và tự dừng sau **35 phút**. Nhấn START lần
+   nữa để dừng sớm. Mảng `gHeaterTestLog` chứa tối đa 211 bản ghi (mẫu tại
    `t=0`, các mẫu định kỳ và một bản ghi trạng thái kết thúc), chiếm khoảng
-   1,8 KiB RAM; trường `complete` đổi thành 1 sau khi dừng.
+   2,5 KiB RAM; trường `complete` đổi thành 1 sau khi dừng.
 5. Để hệ thống nguội về cùng nhiệt độ ban đầu rồi mới chạy mức công suất kế
    tiếp. Nên lưu mỗi mức vào một file riêng (`step_100.csv`, `step_70.csv`,
    `step_40.csv`). Vì hai liên động đã bị vô hiệu hóa, người vận hành phải tự
@@ -133,10 +133,18 @@ python3 tools/capture_ram_log.py \
 
 Script kết nối qua SWD, cho CPU chạy và chờ cờ `gHeaterTestLog.complete`. Sau
 khi người vận hành nhấn START, toàn bộ các bước lấy mẫu 10 giây/lần, lưu RAM,
-chờ đủ 25 phút (hoặc chờ lỗi/dừng sớm), halt CPU, dump RAM và tạo CSV đều tự
+chờ đủ 35 phút (hoặc chờ lỗi/dừng sớm), halt CPU, dump RAM và tạo CSV đều tự
 động. Không cần nhấn Pause hay nhập thêm lệnh GDB. Tùy chọn
 `--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
 không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
+
+Sau một lần chạy đủ 35 phút, dòng tổng kết phải có dạng `.../211 bản ghi`. Nếu
+vẫn hiện `.../151`, bo đang chạy firmware 25 phút cũ hoặc file `.bat` đang truyền
+đường dẫn tới file ELF cũ. Hãy **Clean/Rebuild**, nạp lại firmware vừa build và
+kiểm tra đối số `--elf` trong file `.bat`. Con số phía trước là số bản ghi thực
+tế; ví dụ `144/151` nghĩa là CSV có 144 bản ghi trong bộ đệm firmware cũ có sức
+chứa 151, không phải dữ liệu đủ 35 phút. Xem cột `status` ở dòng cuối CSV để biết
+thí nghiệm kết thúc bình thường (`DONE`), bị dừng tay (`STOP`) hay gặp lỗi.
 
 Các thư mục cha trong đường dẫn `--csv` và `--keep-dump` sẽ được tạo tự động.
 Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/step_100.csv --keep-dump

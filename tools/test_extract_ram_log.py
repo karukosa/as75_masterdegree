@@ -40,6 +40,16 @@ class ExtractRamLogTest(unittest.TestCase):
         self.assertIn("if gHeaterTestLog.complete == 1", commands)
         self.assertIn("dump binary value heater.bin gHeaterTestLog", commands)
 
+    def test_capture_warns_when_old_25_minute_firmware_is_connected(self):
+        warning = capture_ram_log.capacity_warning(151)
+
+        self.assertIn("151", warning)
+        self.assertIn("211", warning)
+        self.assertIn("Clean/Rebuild", warning)
+
+    def test_capture_accepts_35_minute_log_capacity(self):
+        self.assertIsNone(capture_ram_log.capacity_warning(211))
+
     def test_capture_uses_forward_slashes_for_windows_elf_path(self):
         commands = capture_ram_log.build_gdb_commands(
             PureWindowsPath(r"C:\Users\Admin\firmware.elf"),

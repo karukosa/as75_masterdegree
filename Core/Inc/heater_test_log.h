@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-/* 25 minutes at one sample/10 s, including the t=0 and final-status records. */
-#define HEATER_TEST_LOG_CAPACITY 151U
+/* 35 minutes at one sample/10 s, including the t=0 and final-status records. */
+#define HEATER_TEST_LOG_CAPACITY 211U
 #define HEATER_TEST_LOG_MAGIC "HTLOG001"
 #define HEATER_TEST_LOG_VERSION 1U
 

@@ -6,11 +6,25 @@ import csv
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
 
 from extract_ram_log import decode
+
+EXPECTED_LOG_CAPACITY = 211
+
+
+def capacity_warning(capacity: int) -> str | None:
+    """Explain when the connected firmware does not match the 35-minute build."""
+    if capacity == EXPECTED_LOG_CAPACITY:
+        return None
+    return (
+        f"CẢNH BÁO: firmware/ELF đang báo dung lượng {capacity}, không phải "
+        f"{EXPECTED_LOG_CAPACITY} bản ghi cho 35 phút. Hãy Clean/Rebuild, nạp lại "
+        "firmware và kiểm tra file .bat đang trỏ tới đúng file ELF mới."
+    )
 
 
 def _gdb_quote(path: Path) -> str:
@@ -150,6 +164,9 @@ def main() -> int:
             if not complete:
                 parser.error("log nhận được chưa hoàn tất")
             write_csv(args.csv, rows)
+            warning = capacity_warning(capacity)
+            if warning is not None:
+                print(warning, file=sys.stderr)
     finally:
         if openocd_process is not None and openocd_process.poll() is None:
             openocd_process.terminate()
