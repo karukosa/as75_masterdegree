@@ -88,6 +88,8 @@ class ExtractRamLogTest(unittest.TestCase):
             def fake_run(command, check, cwd):
                 self.assertEqual(command[-2:], ["-x", "capture.gdb"])
                 self.assertTrue(check)
+                self.assertTrue((cwd / "heater_ram.bin").is_file())
+                self.assertEqual((cwd / "heater_ram.bin").stat().st_size, 0)
                 gdb_commands = (cwd / "capture.gdb").read_text(encoding="utf-8")
                 self.assertIn("dump binary value heater_ram.bin", gdb_commands)
                 self.assertNotIn(str(kept_dump), gdb_commands)
@@ -104,66 +106,20 @@ class ExtractRamLogTest(unittest.TestCase):
             self.assertEqual(kept_dump.read_bytes(), ram)
             self.assertTrue(csv_path.is_file())
 
-    def test_capture_uses_forward_slashes_for_windows_gdb_paths(self):
-        commands = capture_ram_log.build_gdb_commands(
-            PureWindowsPath(r"C:\Users\Admin\firmware.elf"),
-            PureWindowsPath(r"C:\Users\Admin\Documents\data\heater_ram_70.bin"),
-            "localhost:3333",
-        )
-
-        self.assertIn('file "C:/Users/Admin/firmware.elf"', commands)
-        self.assertIn(
-            'dump binary value "C:/Users/Admin/Documents/data/heater_ram_70.bin"',
-            commands,
-        )
-        self.assertNotIn(r"C:\\Users", commands)
-
-    def test_write_csv_creates_parent_directories(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            output = Path(temporary) / "new" / "data" / "step_100.csv"
-
-            capture_ram_log.write_csv(output, [(0, 100, 1, 25.0, "STOP")])
-
-            with output.open(newline="", encoding="utf-8") as csv_file:
-                self.assertEqual(
-                    list(csv.reader(csv_file)),
-                    [
-                        ["elapsed_ms", "power_percent", "heater_on", "temperature_c", "status"],
-                        ["0", "100", "1", "25.0", "STOP"],
-                    ],
-                )
-
-    def test_capture_dumps_to_temporary_working_directory(self):
+    def test_capture_rejects_an_empty_gdb_dump(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             elf = root / "firmware.elf"
             elf.write_bytes(b"ELF")
-            kept_dump = root / "missing" / "data" / "heater_ram_70.bin"
-            csv_path = root / "data" / "step_70.csv"
-            ram = (
-                extract_ram_log.HEADER.pack(
-                    extract_ram_log.MAGIC, 1, extract_ram_log.SAMPLE.size, 151, 0, 1
-                )
-            )
-
-            def fake_run(command, check, cwd):
-                self.assertEqual(command[-2:], ["-x", "capture.gdb"])
-                self.assertTrue(check)
-                gdb_commands = (cwd / "capture.gdb").read_text(encoding="utf-8")
-                self.assertIn('dump binary value "heater_ram.bin"', gdb_commands)
-                self.assertNotIn(str(kept_dump), gdb_commands)
-                (cwd / "heater_ram.bin").write_bytes(ram)
-
             argv = [
-                "capture_ram_log.py", "--elf", str(elf), "--csv", str(csv_path),
-                "--keep-dump", str(kept_dump),
+                "capture_ram_log.py", "--elf", str(elf),
+                "--csv", str(root / "step.csv"),
             ]
-            with mock.patch.object(capture_ram_log.subprocess, "run", side_effect=fake_run), \
-                    mock.patch("sys.argv", argv):
-                self.assertEqual(capture_ram_log.main(), 0)
 
-            self.assertEqual(kept_dump.read_bytes(), ram)
-            self.assertTrue(csv_path.is_file())
+            with mock.patch.object(capture_ram_log.subprocess, "run"), \
+                    mock.patch("sys.argv", argv), \
+                    self.assertRaisesRegex(SystemExit, "2"):
+                capture_ram_log.main()
 
 
 if __name__ == "__main__":

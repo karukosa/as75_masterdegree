@@ -109,6 +109,12 @@ def main() -> int:
             # directory. Some Windows GDB builds reject even valid absolute paths.
             dump_name = Path("heater_ram.bin")
             dump = temporary_path / dump_name
+            # Pre-create the destination because some Windows/xPack GDB builds
+            # fail with ENOENT instead of creating a new `dump binary` file.
+            try:
+                dump.touch()
+            except OSError as exc:
+                parser.error(f"không thể tạo file dump tạm: {exc}")
             command_file = temporary_path / "capture.gdb"
             command_file.write_text(
                 build_gdb_commands(args.elf.resolve(), dump_name, args.target), encoding="utf-8"
@@ -125,6 +131,9 @@ def main() -> int:
                 parser.error(f"không tìm thấy GDB: {args.gdb}")
             except subprocess.CalledProcessError as exc:
                 parser.error(f"GDB kết thúc với mã lỗi {exc.returncode}")
+
+            if dump.stat().st_size == 0:
+                parser.error("GDB không ghi dữ liệu vào file dump tạm")
 
             if args.keep_dump:
                 kept_dump = args.keep_dump.resolve()
