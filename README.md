@@ -138,6 +138,11 @@ chờ đủ 25 phút (hoặc chờ lỗi/dừng sớm), halt CPU, dump RAM và t
 `--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
 không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
 
+Các thư mục cha trong đường dẫn `--csv` và `--keep-dump` sẽ được tạo tự động.
+Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/step_100.csv --keep-dump
+data/heater_ram_100.bin`, kể cả khi thư mục `data` chưa tồn tại. Điều này cũng
+đảm bảo GDB ghi được dump khi nhấn START lần nữa để dừng thí nghiệm sớm.
+
 STM32 không thể tự gửi dữ liệu chỉ qua dây SWD nếu trên máy tính không có một
 GDB server và chương trình đang chờ nhận; vì vậy chỉ cần khởi chạy script một
 lần trước thí nghiệm, sau đó thao tác duy nhất trên thiết bị là nhấn START.
