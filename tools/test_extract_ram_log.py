@@ -2,7 +2,7 @@ import csv
 import struct
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import extract_ram_log
 import capture_ram_log
@@ -37,6 +37,35 @@ class ExtractRamLogTest(unittest.TestCase):
         self.assertIn("watch -l gHeaterTestLog.complete", commands)
         self.assertIn("if gHeaterTestLog.complete == 1", commands)
         self.assertIn("dump binary value \"heater.bin\" gHeaterTestLog", commands)
+
+    def test_capture_uses_forward_slashes_for_windows_gdb_paths(self):
+        commands = capture_ram_log.build_gdb_commands(
+            PureWindowsPath(r"C:\Users\Admin\firmware.elf"),
+            PureWindowsPath(r"C:\Users\Admin\Documents\data\heater_ram_70.bin"),
+            "localhost:3333",
+        )
+
+        self.assertIn('file "C:/Users/Admin/firmware.elf"', commands)
+        self.assertIn(
+            'dump binary value "C:/Users/Admin/Documents/data/heater_ram_70.bin"',
+            commands,
+        )
+        self.assertNotIn(r"C:\\Users", commands)
+
+    def test_write_csv_creates_parent_directories(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "new" / "data" / "step_100.csv"
+
+            capture_ram_log.write_csv(output, [(0, 100, 1, 25.0, "STOP")])
+
+            with output.open(newline="", encoding="utf-8") as csv_file:
+                self.assertEqual(
+                    list(csv.reader(csv_file)),
+                    [
+                        ["elapsed_ms", "power_percent", "heater_on", "temperature_c", "status"],
+                        ["0", "100", "1", "25.0", "STOP"],
+                    ],
+                )
 
 
 if __name__ == "__main__":

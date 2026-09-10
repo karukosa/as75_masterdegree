@@ -13,7 +13,10 @@ from extract_ram_log import decode
 
 
 def _gdb_quote(path: Path) -> str:
-    return '"' + str(path).replace("\\", "\\\\").replace('"', '\\"') + '"'
+    # GDB accepts forward slashes on Windows.  Using them avoids GDB treating
+    # backslashes in a quoted filename as escape characters (for example,
+    # ``\\t`` in a directory name), which can make an existing path look absent.
+    return '"' + str(path).replace("\\", "/").replace('"', '\\"') + '"'
 
 
 def build_gdb_commands(elf: Path, dump: Path, target: str) -> str:
@@ -40,6 +43,7 @@ continue
 
 
 def write_csv(path: Path, rows) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as output:
         writer = csv.writer(output, lineterminator="\n")
         writer.writerow(("elapsed_ms", "power_percent", "heater_on", "temperature_c", "status"))
@@ -97,6 +101,9 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="heater-log-") as temporary:
             temporary_path = Path(temporary)
             dump = args.keep_dump.resolve() if args.keep_dump else temporary_path / "heater_ram.bin"
+            # GDB's `dump binary value` does not create parent directories.  Create
+            # it before starting GDB so an early STOP can always be captured.
+            dump.parent.mkdir(parents=True, exist_ok=True)
             command_file = temporary_path / "capture.gdb"
             command_file.write_text(
                 build_gdb_commands(args.elf.resolve(), dump, args.target), encoding="utf-8"
