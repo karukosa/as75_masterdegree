@@ -7,7 +7,9 @@ import argparse
 import csv
 import json
 import math
+import sys
 from pathlib import Path
+from typing import Any
 
 
 def read_samples(path: Path) -> list[tuple[float, float, float]]:
@@ -28,45 +30,108 @@ def read_samples(path: Path) -> list[tuple[float, float, float]]:
     return samples
 
 
-def first_crossing(samples: list[tuple[float, float, float]], target: float) -> float:
-    for index in range(1, len(samples)):
-        t0, _, y0 = samples[index - 1]
-        t1, _, y1 = samples[index]
-        if (y0 <= target <= y1) or (y1 <= target <= y0):
-            if y1 == y0:
-                return t1
-            return t0 + (target - y0) * (t1 - t0) / (y1 - y0)
-    raise ValueError("Nhiệt độ chưa đạt mức cần thiết; hãy chạy thí nghiệm lâu hơn")
+def linear_slope(points: list[tuple[float, float]]) -> float:
+    """Return the least-squares slope in output units per second."""
+    mean_x = sum(point[0] for point in points) / len(points)
+    mean_y = sum(point[1] for point in points) / len(points)
+    denominator = sum((point[0] - mean_x) ** 2 for point in points)
+    if denominator == 0.0:
+        return 0.0
+    return sum((x - mean_x) * (y - mean_y) for x, y in points) / denominator
 
 
-def identify(samples: list[tuple[float, float, float]]) -> dict[str, float]:
+def _fit_at(samples, baseline: float, power: float, dead_time: float, tau: float):
+    """Fit gain analytically for fixed dead time and tau, then return SSE."""
+    start = samples[0][0]
+    features = [
+        power * (1.0 - math.exp(-(t - start - dead_time) / tau))
+        if t - start > dead_time else 0.0
+        for t, _, _ in samples
+    ]
+    denominator = sum(value * value for value in features)
+    if denominator == 0.0:
+        return math.inf, 0.0
+    gain = sum(
+        value * (sample[2] - baseline)
+        for value, sample in zip(features, samples)
+    ) / denominator
+    if gain <= 0.0:
+        return math.inf, gain
+    sse = sum(
+        (sample[2] - (baseline + gain * value)) ** 2
+        for value, sample in zip(features, samples)
+    )
+    return sse, gain
+
+
+def identify(
+    samples: list[tuple[float, float, float]], allow_unsettled_pid: bool = False
+) -> dict[str, Any]:
     count = len(samples)
     # Firmware emits the first point immediately after applying the step. Keep
     # the baseline short so a long recording does not average in the rise.
     baseline_count = min(3, count)
-    tail_count = max(5, count // 5)
     baseline = sum(sample[2] for sample in samples[:baseline_count]) / baseline_count
-    steady = sum(sample[2] for sample in samples[-tail_count:]) / tail_count
     power = sum(sample[1] for sample in samples) / count
-    delta = steady - baseline
+    duration = samples[-1][0] - samples[0][0]
+    delta = samples[-1][2] - baseline
     if power <= 0.0 or delta <= 1.0:
         raise ValueError("Độ tăng nhiệt hoặc công suất không đủ để nhận dạng")
 
-    t_start = samples[0][0]
-    dead_time = max(0.0, first_crossing(samples, baseline + 0.02 * delta) - t_start)
-    t63 = first_crossing(samples, baseline + 0.632 * delta) - t_start
-    tau = t63 - dead_time
-    if tau <= 0.0:
-        raise ValueError("Không xác định được hằng số thời gian dương")
+    # Fit every measured point instead of treating the moving tail as a steady
+    # state. Gain is solved analytically; L and T use a deterministic log grid.
+    sample_period = duration / (count - 1)
+    tau_min, tau_max = max(sample_period, duration / 100.0), duration * 20.0
+    dead_max = min(duration / 4.0, 600.0)
+    best = (math.inf, 0.0, duration, 0.0)
+    for dead_index in range(81):
+        candidate_dead = dead_max * dead_index / 80.0
+        for tau_index in range(121):
+            ratio = tau_index / 120.0
+            candidate_tau = tau_min * (tau_max / tau_min) ** ratio
+            sse, candidate_gain = _fit_at(
+                samples, baseline, power, candidate_dead, candidate_tau
+            )
+            if sse < best[0]:
+                best = (sse, candidate_dead, candidate_tau, candidate_gain)
+    sse, dead_time, tau, gain = best
 
-    gain = delta / power
+    mean_temperature = sum(sample[2] for sample in samples) / count
+    total_squares = sum((sample[2] - mean_temperature) ** 2 for sample in samples)
+    r_squared = 1.0 - sse / total_squares if total_squares > 0.0 else 0.0
+    rmse = math.sqrt(sse / count)
+    tail_count = max(10, count // 5)
+    tail_slope = 60.0 * linear_slope([(t, y) for t, _, y in samples[-tail_count:]])
+    steady_threshold = max(0.05, 0.001 * abs(delta))
+    steady_reached = (
+        abs(tail_slope) <= steady_threshold
+        and duration >= dead_time + 3.0 * tau
+    )
+    fit_at_tau_limit = tau >= 0.95 * tau_max
+    model_valid = steady_reached and r_squared >= 0.90 and not fit_at_tau_limit
+    warnings = []
+    if not steady_reached:
+        warnings.append(
+            f"Nhiệt độ cuối vẫn đổi {tail_slope:.3f} °C/phút hoặc phép đo chưa đủ 3T; "
+            "K và T còn là ngoại suy."
+        )
+    if fit_at_tau_limit:
+        warnings.append(
+            "T chạm giới hạn tìm kiếm; dữ liệu gần tuyến tính và mô hình "
+            "không định danh được."
+        )
+    if r_squared < 0.90:
+        warnings.append(f"FOPDT khớp kém (R²={r_squared:.4f}).")
+
+    steady = baseline + gain * power
     tuning_lambda = max(tau, 3.0 * dead_time, 1.0)
     kp = tau / (gain * (tuning_lambda + dead_time))
     ti = tau + dead_time / 2.0
     td = (tau * dead_time) / (2.0 * tau + dead_time) if dead_time > 0.0 else 0.0
     pid_ki = kp / ti
     pid_kd = kp * td
-    return {
+    result = {
+        "identification_method": "full_curve_least_squares_fopdt",
         "power_step": power,
         "initial_temperature_c": baseline,
         "steady_temperature_c": steady,
@@ -74,13 +139,25 @@ def identify(samples: list[tuple[float, float, float]]) -> dict[str, float]:
         "dead_time_s": dead_time,
         "time_constant_s": tau,
         "imc_lambda_s": tuning_lambda,
-        "pid_kp": kp,
-        "pid_ki_per_s": pid_ki,
-        "pid_kd_s": pid_kd,
-        "firmware_pid_kp_0_to_255": 255.0 * kp,
-        "firmware_pid_ki_0_to_255_per_s": 255.0 * pid_ki,
-        "firmware_pid_kd_0_to_255_s": 255.0 * pid_kd,
+        "fit_rmse_c": rmse,
+        "fit_r_squared": r_squared,
+        "tail_slope_c_per_min": tail_slope,
+        "steady_state_reached": steady_reached,
+        "model_valid_for_pid": model_valid,
+        "warnings": warnings,
     }
+    publish_pid = model_valid or allow_unsettled_pid
+    result.update(
+        {
+            "pid_kp": kp if publish_pid else None,
+            "pid_ki_per_s": pid_ki if publish_pid else None,
+            "pid_kd_s": pid_kd if publish_pid else None,
+            "firmware_pid_kp_0_to_255": 255.0 * kp if publish_pid else None,
+            "firmware_pid_ki_0_to_255_per_s": 255.0 * pid_ki if publish_pid else None,
+            "firmware_pid_kd_0_to_255_s": 255.0 * pid_kd if publish_pid else None,
+        }
+    )
+    return result
 
 
 def write_svg(path: Path, samples: list[tuple[float, float, float]], model: dict[str, float]) -> None:
@@ -128,18 +205,30 @@ def main() -> None:
     parser.add_argument("csv", type=Path, help="CSV captured from the controller")
     parser.add_argument("--svg", type=Path, default=Path("heater_response.svg"))
     parser.add_argument("--json", type=Path, default=Path("heater_model.json"))
+    parser.add_argument(
+        "--allow-unsettled-pid", action="store_true",
+        help="vẫn xuất PID ngoại suy khi dữ liệu chưa đạt xác lập (không khuyến nghị)",
+    )
     args = parser.parse_args()
     samples = read_samples(args.csv)
-    model = identify(samples)
+    model = identify(samples, args.allow_unsettled_pid)
     args.json.write_text(json.dumps(model, indent=2) + "\n", encoding="utf-8")
     write_svg(args.svg, samples, model)
     print(f"G(s) = {model['process_gain_c_per_fraction']:.6g} exp(-{model['dead_time_s']:.3f}s) / "
           f"({model['time_constant_s']:.3f}s + 1)")
-    print(f"PID: Kp={model['pid_kp']:.6g}, Ki={model['pid_ki_per_s']:.6g}/s, "
-          f"Kd={model['pid_kd_s']:.6g}s")
-    print(f"PID firmware (output 0..255): Kp={model['firmware_pid_kp_0_to_255']:.6g}, "
-          f"Ki={model['firmware_pid_ki_0_to_255_per_s']:.6g}/s, "
-          f"Kd={model['firmware_pid_kd_0_to_255_s']:.6g}s")
+    print(f"Độ khớp: RMSE={model['fit_rmse_c']:.3f} °C, R²={model['fit_r_squared']:.5f}; "
+          f"độ dốc cuối={model['tail_slope_c_per_min']:.3f} °C/phút")
+    for warning in model["warnings"]:
+        print(f"CẢNH BÁO: {warning}", file=sys.stderr)
+    if model["pid_kp"] is None:
+        print("PID: KHÔNG XUẤT vì dữ liệu chưa đủ tin cậy. Hãy đo lâu hơn hoặc dùng "
+              "--allow-unsettled-pid để xem giá trị ngoại suy.")
+    else:
+        print(f"PID: Kp={model['pid_kp']:.6g}, Ki={model['pid_ki_per_s']:.6g}/s, "
+              f"Kd={model['pid_kd_s']:.6g}s")
+        print(f"PID firmware (output 0..255): Kp={model['firmware_pid_kp_0_to_255']:.6g}, "
+              f"Ki={model['firmware_pid_ki_0_to_255_per_s']:.6g}/s, "
+              f"Kd={model['firmware_pid_kd_0_to_255_s']:.6g}s")
     print(f"Đã ghi {args.svg} và {args.json}")
 
 
