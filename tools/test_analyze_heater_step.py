@@ -1,5 +1,10 @@
 import math
+import csv
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 import analyze_heater_step
 
@@ -46,6 +51,52 @@ class AnalyzeHeaterStepTest(unittest.TestCase):
 
         self.assertFalse(model["model_valid_for_pid"])
         self.assertIsNotNone(model["pid_kp"])
+
+    def test_cli_returns_nonzero_for_unsettled_data_after_writing_outputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            csv_path = root / "step.csv"
+            svg_path = root / "step.svg"
+            json_path = root / "model.json"
+            with csv_path.open("w", newline="", encoding="utf-8") as stream:
+                writer = csv.writer(stream)
+                writer.writerow(
+                    ("elapsed_ms", "power_percent", "heater_on", "temperature_c", "status")
+                )
+                for seconds in range(0, 301, 10):
+                    writer.writerow((seconds * 1000, 40, 1, 30.0 + seconds * 0.02, "RUN"))
+
+            argv = [
+                "analyze_heater_step.py", str(csv_path),
+                "--svg", str(svg_path), "--json", str(json_path),
+            ]
+            with mock.patch("sys.argv", argv):
+                self.assertEqual(analyze_heater_step.main(), 2)
+
+            self.assertTrue(svg_path.is_file())
+            model = json.loads(json_path.read_text(encoding="utf-8"))
+            self.assertFalse(model["model_valid_for_pid"])
+            self.assertIsNone(model["pid_kp"])
+
+    def test_cli_override_returns_success_for_batch_compatibility(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            csv_path = root / "step.csv"
+            with csv_path.open("w", newline="", encoding="utf-8") as stream:
+                writer = csv.writer(stream)
+                writer.writerow(
+                    ("elapsed_ms", "power_percent", "heater_on", "temperature_c", "status")
+                )
+                for seconds in range(0, 301, 10):
+                    writer.writerow((seconds * 1000, 40, 1, 30.0 + seconds * 0.02, "RUN"))
+
+            argv = [
+                "analyze_heater_step.py", str(csv_path),
+                "--svg", str(root / "step.svg"), "--json", str(root / "model.json"),
+                "--allow-unsettled-pid",
+            ]
+            with mock.patch("sys.argv", argv):
+                self.assertEqual(analyze_heater_step.main(), 0)
 
 
 if __name__ == "__main__":

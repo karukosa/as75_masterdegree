@@ -200,7 +200,7 @@ def write_svg(path: Path, samples: list[tuple[float, float, float]], model: dict
     path.write_text(svg, encoding="utf-8")
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("csv", type=Path, help="CSV captured from the controller")
     parser.add_argument("--svg", type=Path, default=Path("heater_response.svg"))
@@ -230,7 +230,11 @@ def main() -> None:
               f"Ki={model['firmware_pid_ki_0_to_255_per_s']:.6g}/s, "
               f"Kd={model['firmware_pid_kd_0_to_255_s']:.6g}s")
     print(f"Đã ghi {args.svg} và {args.json}")
+    # Batch files use ERRORLEVEL to decide whether they may announce that the
+    # captured data are suitable for initial PID tuning. Keep the SVG and JSON
+    # diagnostics, but return a distinct failure status when PID was withheld.
+    return 0 if model["pid_kp"] is not None else 2
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

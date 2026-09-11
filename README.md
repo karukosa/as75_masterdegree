@@ -236,6 +236,12 @@ hoặc thời gian đo chưa đủ ba hằng số thời gian, các khóa PID đ
 suy để nghiên cứu, có thể thêm `--allow-unsettled-pid`; không dùng tùy chọn này
 để lấy thông số đưa thẳng vào máy.
 
+Khi dữ liệu chưa đạt các điều kiện trên, công cụ vẫn ghi SVG và JSON chẩn đoán
+nhưng trả mã lỗi `2`. Vì vậy file `.bat` dùng `if errorlevel 1` sẽ tự đi tới
+nhánh `analysis_failed` và không thông báo nhầm rằng dữ liệu đã dùng được cho
+PID. Nếu truyền `--allow-unsettled-pid`, công cụ xuất PID ngoại suy và trả mã
+thành công `0` để phục vụ phân tích thủ công.
+
 Ba khóa bắt đầu bằng `firmware_pid_` đã được nhân 255 để dùng trực tiếp với
 thang đầu ra 0..255 khi khôi phục điều khiển PID. Đây chỉ là điểm khởi đầu:
 kiểm tra ở công suất thấp, giới hạn đầu ra và giữ bảo vệ quá nhiệt khi đưa PID
