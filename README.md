@@ -228,6 +228,21 @@ G(s) =            -----------
 Trong đó `K` là độ tăng °C trên một đơn vị công suất (1.0 = 100%), `L` là thời
 gian trễ và `T` là hằng số thời gian. File SVG chồng đường đo và đường mô hình;
 file JSON chứa hệ số hàm truyền và `pid_kp`, `pid_ki_per_s`, `pid_kd_s` theo
-phương pháp IMC bảo thủ. Ba khóa bắt đầu bằng `firmware_pid_` đã được nhân 255
-để dùng trực tiếp với thang đầu ra 0..255 khi khôi phục điều khiển PID. Đây chỉ là điểm khởi đầu: kiểm tra ở công suất thấp,
-giới hạn đầu ra và giữ bảo vệ quá nhiệt khi đưa PID trở lại máy.
+phương pháp IMC bảo thủ. Công cụ khớp toàn bộ đường đo bằng bình phương tối
+thiểu, đồng thời ghi `fit_rmse_c`, `fit_r_squared`, `tail_slope_c_per_min` và
+`steady_state_reached` để đánh giá chất lượng. Nếu đoạn cuối còn tăng/giảm rõ
+hoặc thời gian đo chưa đủ ba hằng số thời gian, các khóa PID được ghi là
+`null` thay vì xuất một bộ số có độ chính xác giả. Khi chỉ cần xem giá trị ngoại
+suy để nghiên cứu, có thể thêm `--allow-unsettled-pid`; không dùng tùy chọn này
+để lấy thông số đưa thẳng vào máy.
+
+Khi dữ liệu chưa đạt các điều kiện trên, công cụ vẫn ghi SVG và JSON chẩn đoán
+nhưng trả mã lỗi `2`. Vì vậy file `.bat` dùng `if errorlevel 1` sẽ tự đi tới
+nhánh `analysis_failed` và không thông báo nhầm rằng dữ liệu đã dùng được cho
+PID. Nếu truyền `--allow-unsettled-pid`, công cụ xuất PID ngoại suy và trả mã
+thành công `0` để phục vụ phân tích thủ công.
+
+Ba khóa bắt đầu bằng `firmware_pid_` đã được nhân 255 để dùng trực tiếp với
+thang đầu ra 0..255 khi khôi phục điều khiển PID. Đây chỉ là điểm khởi đầu:
+kiểm tra ở công suất thấp, giới hạn đầu ra và giữ bảo vệ quá nhiệt khi đưa PID
+trở lại máy.
