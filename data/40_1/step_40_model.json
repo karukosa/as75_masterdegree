@@ -1,0 +1,15 @@
+{
+  "power_step": 0.4,
+  "initial_temperature_c": 33.2,
+  "steady_temperature_c": 71.02439024390245,
+  "process_gain_c_per_fraction": 94.5609756097561,
+  "dead_time_s": 84.48087804878065,
+  "time_constant_s": 1073.4748682926827,
+  "imc_lambda_s": 1073.4748682926827,
+  "pid_kp": 0.009803653989489151,
+  "pid_ki_per_s": 8.786877732334518e-06,
+  "pid_kd_s": 0.398432620763885,
+  "firmware_pid_kp_0_to_255": 2.4999317673197337,
+  "firmware_pid_ki_0_to_255_per_s": 0.002240653821745302,
+  "firmware_pid_kd_0_to_255_s": 101.60031829479068
+}

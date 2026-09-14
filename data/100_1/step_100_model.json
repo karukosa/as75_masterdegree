@@ -1,0 +1,24 @@
+{
+  "identification_method": "full_curve_least_squares_fopdt",
+  "power_step": 1.0,
+  "initial_temperature_c": 33.0,
+  "steady_temperature_c": 246.90700224659784,
+  "process_gain_c_per_fraction": 213.90700224659784,
+  "dead_time_s": 333.253125,
+  "time_constant_s": 2924.310812200935,
+  "imc_lambda_s": 2924.310812200935,
+  "fit_rmse_c": 1.5539385885422554,
+  "fit_r_squared": 0.9976410892707097,
+  "tail_slope_c_per_min": 2.511170321787252,
+  "steady_state_reached": false,
+  "model_valid_for_pid": false,
+  "warnings": [
+    "Nhi\u1ec7t \u0111\u1ed9 cu\u1ed1i v\u1eabn \u0111\u1ed5i 2.511 \u00b0C/ph\u00fat ho\u1eb7c ph\u00e9p \u0111o ch\u01b0a \u0111\u1ee7 3T; K v\u00e0 T c\u00f2n l\u00e0 ngo\u1ea1i suy."
+  ],
+  "pid_kp": null,
+  "pid_ki_per_s": null,
+  "pid_kd_s": null,
+  "firmware_pid_kp_0_to_255": null,
+  "firmware_pid_ki_0_to_255_per_s": null,
+  "firmware_pid_kd_0_to_255_s": null
+}
