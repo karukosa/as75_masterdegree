@@ -1,0 +1,12 @@
+{
+  "ambient_temperature_c": 11.843712113471,
+  "time_constant_s": 7627.267572919704,
+  "cooling_initial_temperature_c": 123.91501016814654,
+  "cooling_rmse_c": 0.4113504025323033,
+  "cooling_r_squared": 0.9988568453589437,
+  "model": "T(t) = Ta + (T0-Ta) exp(-t/tau)",
+  "pid_kp": null,
+  "pid_ki_per_s": null,
+  "pid_kd_s": null,
+  "pid_note": "Can them log gia nhiet de tinh process gain va PID."
+}
