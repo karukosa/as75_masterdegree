@@ -2,7 +2,7 @@
 
 Firmware hiện chạy ở chế độ **thí nghiệm đáp ứng bước hở vòng**, thay cho chu
 trình tiệt trùng tự động. Mục đích là ghi nhiệt độ theo thời gian tại ba mức
-công suất để dựng biểu đồ, nhận dạng hàm truyền và lấy bộ thông số PID ban đầu.
+công suất và một lần nguội tự nhiên 0% để nhận dạng mô hình nhiệt chung.
 
 ## Bảng chân để tạo project mới
 
@@ -64,13 +64,16 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
    cần chân SWO, UART hay thay đổi phần cứng.
 2. Cấp nước và đóng cửa thủ công, sau đó chờ kiểm tra PT100 hoàn tất. Firmware
    thí nghiệm không đọc cảm biến mức nước hoặc công tắc cửa.
-3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Màn hình 1 hiện `H100`,
-   `H 70`, hoặc `H 40`; màn hình 2 hiện nhiệt độ.
+3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Nhấn P3 lần nữa để
+   chuyển qua lại giữa **40% và 0%**. Màn hình 1 hiện `H100`, `H 70`, `H 40`
+   hoặc `H  0`; ở 0% LED P3 vẫn sáng để chỉ nhóm lựa chọn P3.
 4. Nhấn **START**. Firmware xóa log cũ trong RAM, điều chế SSR theo cửa sổ 10
-   giây, **ghi một mẫu mỗi 10 giây** và tự dừng sau **35 phút**. Nhấn START lần
-   nữa để dừng sớm. Mảng `gHeaterTestLog` chứa tối đa 211 bản ghi (mẫu tại
+   giây, **ghi một mẫu mỗi 10 giây** và tự dừng sau **35 phút**. Riêng lựa chọn
+   0%, firmware tự gia nhiệt 100% đến 110 °C, hạ xuống 30% đến 121 °C rồi tắt
+   SSR và ghi quá trình nguội trong **60 phút**. Nhấn START lần
+   nữa để dừng sớm. Mảng `gHeaterTestLog` chứa tối đa 361 bản ghi (mẫu tại
    `t=0`, các mẫu định kỳ và một bản ghi trạng thái kết thúc), chiếm khoảng
-   2,5 KiB RAM; trường `complete` đổi thành 1 sau khi dừng.
+   4,4 KiB RAM; trường `complete` đổi thành 1 sau khi dừng.
 5. Để hệ thống nguội về cùng nhiệt độ ban đầu rồi mới chạy mức công suất kế
    tiếp. Nên lưu mỗi mức vào một file riêng (`step_100.csv`, `step_70.csv`,
    `step_40.csv`). Vì hai liên động đã bị vô hiệu hóa, người vận hành phải tự
@@ -133,7 +136,8 @@ python3 tools/capture_ram_log.py \
 
 Script kết nối qua SWD, cho CPU chạy và chờ cờ `gHeaterTestLog.complete`. Sau
 khi người vận hành nhấn START, toàn bộ các bước lấy mẫu 10 giây/lần, lưu RAM,
-chờ đủ 35 phút (hoặc chờ lỗi/dừng sớm), halt CPU, dump RAM và tạo CSV đều tự
+chờ phép đo hoàn tất (35 phút khi gia nhiệt, 60 phút khi nguội, hoặc dừng sớm),
+halt CPU, dump RAM và tạo CSV đều tự
 động. Không cần nhấn Pause hay nhập thêm lệnh GDB. Tùy chọn
 `--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
 không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
@@ -246,3 +250,51 @@ Ba khóa bắt đầu bằng `firmware_pid_` đã được nhân 255 để dùng
 thang đầu ra 0..255 khi khôi phục điều khiển PID. Đây chỉ là điểm khởi đầu:
 kiểm tra ở công suất thấp, giới hạn đầu ra và giữ bảo vệ quá nhiệt khi đưa PID
 trở lại máy.
+
+## Đo nguội 0% và nhận dạng mô hình nhiệt chung
+
+Không cần chạy lại các mức 40–100%. Sau khi hoàn tất các log gia nhiệt hiện
+có, thực hiện thêm đúng một lần nguội tự nhiên. Chế độ này tự thực hiện cả pha
+gia nhiệt ban đầu và pha ghi đường nguội:
+
+1. Khi máy đang dừng, nhấn P3 cho đến khi màn hình công suất hiện `H  0`.
+2. Xác nhận đủ nước, cửa đóng chắc chắn, sau đó nhấn START. Màn hình công suất
+   đổi sang `H100`; firmware bật SSR 100% để gia nhiệt nhanh đến **110 °C**.
+   Tại 110 °C, công suất tự hạ xuống **30%** và màn hình đổi sang `H 30`. Việc
+   giảm công suất sớm hạn chế quán tính nhiệt làm nhiệt độ vượt quá 121 °C.
+   Pha gia nhiệt có giới hạn 35 phút và vẫn kiểm tra PT100/quá nhiệt 300 ms/lần.
+3. Khi nhiệt độ đạt 121 °C, firmware tắt SSR ngay, phát hai tiếng bíp, đưa màn
+   hình công suất về `H  0`, xóa các mẫu của pha gia nhiệt và bắt đầu mốc `t=0`
+   của log nguội. Vì vậy CSV 0% chỉ chứa dữ liệu cần cho phép khớp đường nguội.
+4. Giữ nguyên cửa, lượng nước và trạng thái hệ thống. SSR luôn tắt trong pha
+   này; firmware ghi nhiệt độ mỗi 10 giây và tự kết thúc sau 60 phút. Có thể
+   nhấn START để dừng sau tối thiểu 35 phút nếu cần.
+5. Lấy log như bình thường và lưu thành `data/0_1/step_0.csv`.
+
+Sau đó kết hợp log nguội với tất cả log gia nhiệt trong một lệnh:
+
+```bash
+python3 tools/analyze_thermal_model.py \
+  --cooling data/0_1/step_0.csv \
+  data/40_1/step_40.csv data/40_2/step_40.csv \
+  data/70_1/step_70.csv data/100_1/step_100.csv \
+  --json data/thermal_model.json
+```
+
+Công cụ trước hết khớp đường nguội theo
+`T(t) = Ta + (T0 - Ta) exp(-t/tau)` để tìm nhiệt độ môi trường `Ta` và hằng số
+thời gian `tau`. Sau đó các đoạn gia nhiệt được ghép lại để tìm `K` trong mô
+hình cân bằng năng lượng:
+
+```text
+dT/dt = -(T - Ta)/tau + (K/tau) u
+```
+
+JSON kết quả chứa `ambient_temperature_c`, `time_constant_s`,
+`process_gain_c_per_fraction`, chỉ số khớp đường nguội, sai số phương trình
+trên toàn bộ dữ liệu gia nhiệt và bộ `pi_kp`, `pi_ki_per_s`, `pi_kd_s = 0`.
+Mặc định công cụ dùng IMC bảo thủ với `lambda = tau`; có thể truyền
+`--lambda-s` để nghiên cứu một đáp ứng khác. Các khóa `firmware_pi_` đã được
+đổi sang thang SSR 0–255. Vẫn phải thử kín vòng thận trọng ở 121 °C với giới
+hạn đầu ra, anti-windup, thời gian ON/OFF tối thiểu và bảo vệ quá nhiệt trước
+khi vận hành.

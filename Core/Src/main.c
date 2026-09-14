@@ -24,6 +24,12 @@
 #define HEATER_TEST_SAFETY_CHECK_MS 300U
 #define HEATER_TEST_WINDOW_MS 10000U
 #define HEATER_TEST_DURATION_MS (35U * MINUTE_MS)
+#define COOLING_TEST_DURATION_MS (60U * MINUTE_MS)
+#define COOLING_PREHEAT_TIMEOUT_MS (35U * MINUTE_MS)
+#define COOLING_PREHEAT_REDUCE_TEMPERATURE_TENTHS 1100
+#define COOLING_START_TEMPERATURE_TENTHS 1210
+#define COOLING_PREHEAT_FULL_POWER_PERCENT 100U
+#define COOLING_PREHEAT_REDUCED_POWER_PERCENT 30U
 
 typedef struct {
   GPIO_TypeDef *port;
@@ -79,6 +85,8 @@ static int16_t filteredTemperatureTenthsC;
 static uint8_t heaterTestPowerPercent = 100U;
 static uint8_t heaterTestRunning;
 static uint8_t heaterTestHeaterOn;
+static uint8_t coolingPreheatActive;
+static uint8_t coolingPreheatPowerPercent;
 static uint32_t heaterTestStartTick;
 static uint32_t heaterTestLastSampleTick;
 static uint32_t heaterTestLastSafetyCheckTick;
@@ -112,6 +120,8 @@ static uint8_t SegmentForCharacter(char character)
   switch (character) {
     case '0': return 0x3fU;
     case '1': return 0x06U;
+    case '2': return 0x5bU;
+    case '3': return 0x4fU;
     case '4': return 0x66U;
     case '7': return 0x07U;
     case 'H': return 0x76U;
@@ -309,6 +319,15 @@ static void HeaterTest_DisplayPower(void)
   tm1637DisplaySegments(&display1, segments);
 }
 
+static void CoolingTest_DisplayPreheatPower(void)
+{
+  uint8_t selectedPower = heaterTestPowerPercent;
+
+  heaterTestPowerPercent = coolingPreheatPowerPercent;
+  HeaterTest_DisplayPower();
+  heaterTestPowerPercent = selectedPower;
+}
+
 static void HeaterTest_LogSample(uint32_t now, HeaterTestLogStatus status)
 {
   if (HeaterTestLog_Append(now - heaterTestStartTick, temperatureTenthsC,
@@ -325,8 +344,10 @@ static void HeaterTest_Stop(HeaterTestLogStatus status, uint32_t now)
   }
   heaterTestRunning = 0U;
   heaterTestHeaterOn = 0U;
+  coolingPreheatActive = 0U;
   SafetyOutputs_Stop();
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
+  HeaterTest_DisplayPower();
   HeaterTestLog_MarkComplete();
 }
 
@@ -342,18 +363,46 @@ static void HeaterTest_Start(uint32_t now)
   heaterTestLastSafetyCheckTick = now - HEATER_TEST_SAFETY_CHECK_MS;
   HeaterTestLog_Reset();
   heaterTestRunning = 1U;
+  coolingPreheatActive = (heaterTestPowerPercent == 0U) ? 1U : 0U;
+  coolingPreheatPowerPercent = COOLING_PREHEAT_FULL_POWER_PERCENT;
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_SET);
+  if (coolingPreheatActive != 0U) {
+    if (temperatureTenthsC >= (int16_t)COOLING_PREHEAT_REDUCE_TEMPERATURE_TENTHS) {
+      coolingPreheatPowerPercent = COOLING_PREHEAT_REDUCED_POWER_PERCENT;
+    }
+    CoolingTest_DisplayPreheatPower();
+  }
   Buzzer_Play(BUZZER_EVENT_START);
 }
 
 static void HeaterTest_ApplyPower(uint32_t now)
 {
   uint32_t elapsed = (now - heaterTestStartTick) % HEATER_TEST_WINDOW_MS;
-  uint32_t onTime = HEATER_TEST_WINDOW_MS * heaterTestPowerPercent / 100U;
+  uint8_t appliedPower = (coolingPreheatActive != 0U) ?
+                         coolingPreheatPowerPercent : heaterTestPowerPercent;
+  uint32_t onTime;
+
+  if (coolingPreheatActive != 0U &&
+      temperatureTenthsC >= (int16_t)COOLING_START_TEMPERATURE_TENTHS) {
+    appliedPower = 0U;
+  }
+  onTime = HEATER_TEST_WINDOW_MS * appliedPower / 100U;
 
   heaterTestHeaterOn = (elapsed < onTime) ? 1U : 0U;
   HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin,
                     heaterTestHeaterOn ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+static void CoolingTest_BeginLogging(uint32_t now)
+{
+  coolingPreheatActive = 0U;
+  heaterTestHeaterOn = 0U;
+  SafetyOutputs_Stop();
+  heaterTestStartTick = now;
+  heaterTestLastSampleTick = now - HEATER_TEST_SAMPLE_MS;
+  HeaterTestLog_Reset();
+  HeaterTest_DisplayPower();
+  Buzzer_Play(BUZZER_EVENT_READY);
 }
 
 static void HeaterTest_Process(uint32_t now)
@@ -367,7 +416,13 @@ static void HeaterTest_Process(uint32_t now)
                        BUTTON_LONG_PRESS_MS, BUTTON_REPEAT_MS);
     if (ButtonInput_ConsumePressed(&powerButtons[index]) != 0U &&
         heaterTestRunning == 0U && startupSafetyState == STARTUP_SAFETY_READY) {
-      heaterTestPowerPercent = powers[index];
+      /* There is no fourth power button: P3 alternates between 40% and 0%.
+       * This keeps the existing panel wiring usable for the cooling test. */
+      if (index == 2U && heaterTestPowerPercent == powers[index]) {
+        heaterTestPowerPercent = 0U;
+      } else {
+        heaterTestPowerPercent = powers[index];
+      }
       PowerLed_Select(index);
       HeaterTest_DisplayPower();
       Buzzer_Play(BUZZER_EVENT_BUTTON);
@@ -393,7 +448,10 @@ static void HeaterTest_Process(uint32_t now)
   if (heaterTestRunning == 0U) {
     return;
   }
-  if ((now - heaterTestStartTick) >= HEATER_TEST_DURATION_MS) {
+  if ((now - heaterTestStartTick) >= ((coolingPreheatActive != 0U) ?
+                                      COOLING_PREHEAT_TIMEOUT_MS :
+                                      ((heaterTestPowerPercent == 0U) ?
+                                       COOLING_TEST_DURATION_MS : HEATER_TEST_DURATION_MS))) {
     HeaterTest_Stop(HEATER_LOG_STATUS_DONE, now);
     Buzzer_Play(BUZZER_EVENT_COMPLETE);
     return;
@@ -407,6 +465,17 @@ static void HeaterTest_Process(uint32_t now)
   if (Temperature_Check() == 0U) {
     HeaterTest_Stop((temperatureTenthsC > (int16_t)OVER_TEMPERATURE_TENTHS) ?
                     HEATER_LOG_STATUS_OVER_TEMP : HEATER_LOG_STATUS_SENSOR_ERROR, now);
+    return;
+  }
+  if (coolingPreheatActive != 0U) {
+    if (temperatureTenthsC >= (int16_t)COOLING_START_TEMPERATURE_TENTHS) {
+      CoolingTest_BeginLogging(now);
+    } else if (temperatureTenthsC >=
+               (int16_t)COOLING_PREHEAT_REDUCE_TEMPERATURE_TENTHS &&
+               coolingPreheatPowerPercent != COOLING_PREHEAT_REDUCED_POWER_PERCENT) {
+      coolingPreheatPowerPercent = COOLING_PREHEAT_REDUCED_POWER_PERCENT;
+      CoolingTest_DisplayPreheatPower();
+    }
     return;
   }
   if ((now - heaterTestLastSampleTick) >= HEATER_TEST_SAMPLE_MS) {

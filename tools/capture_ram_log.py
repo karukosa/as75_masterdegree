@@ -13,16 +13,17 @@ from pathlib import Path
 
 from extract_ram_log import decode
 
-EXPECTED_LOG_CAPACITY = 211
+EXPECTED_LOG_CAPACITY = 361
 
 
 def capacity_warning(capacity: int) -> str | None:
-    """Explain when the connected firmware does not match the 35-minute build."""
+    """Explain when the connected firmware cannot hold the 60-minute cooling log."""
     if capacity == EXPECTED_LOG_CAPACITY:
         return None
     return (
         f"CẢNH BÁO: firmware/ELF đang báo dung lượng {capacity}, không phải "
-        f"{EXPECTED_LOG_CAPACITY} bản ghi cho 35 phút. Hãy Clean/Rebuild, nạp lại "
+        f"{EXPECTED_LOG_CAPACITY} bản ghi cho phép đo nguội 60 phút. "
+        "Hãy Clean/Rebuild, nạp lại "
         "firmware và kiểm tra file .bat đang trỏ tới đúng file ELF mới."
     )
 
