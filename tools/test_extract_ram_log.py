@@ -44,11 +44,11 @@ class ExtractRamLogTest(unittest.TestCase):
         warning = capture_ram_log.capacity_warning(151)
 
         self.assertIn("151", warning)
-        self.assertIn("211", warning)
+        self.assertIn("361", warning)
         self.assertIn("Clean/Rebuild", warning)
 
-    def test_capture_accepts_35_minute_log_capacity(self):
-        self.assertIsNone(capture_ram_log.capacity_warning(211))
+    def test_capture_accepts_60_minute_log_capacity(self):
+        self.assertIsNone(capture_ram_log.capacity_warning(361))
 
     def test_capture_uses_forward_slashes_for_windows_elf_path(self):
         commands = capture_ram_log.build_gdb_commands(
