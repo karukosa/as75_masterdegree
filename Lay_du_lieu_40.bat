@@ -11,14 +11,15 @@ pause >nul
 exit /b %RESULT%
 
 :main
-rem Chi can doi gia tri nay thanh 40, 70 hoac 100 cho muc cong suat can thu.
-set "POWER_PERCENT=40"
+rem Chi can doi gia tri nay thanh 0, 40, 70 hoac 100 cho muc cong suat can thu.
+set "POWER_PERCENT=0"
 set "POWER_BUTTON="
 
 if "%POWER_PERCENT%"=="100" set "POWER_BUTTON=P1"
 if "%POWER_PERCENT%"=="70" set "POWER_BUTTON=P2"
 if "%POWER_PERCENT%"=="40" set "POWER_BUTTON=P3"
-if not defined POWER_BUTTON echo LOI: POWER_PERCENT chi duoc phep la 40, 70 hoac 100.
+if "%POWER_PERCENT%"=="0" set "POWER_BUTTON=P3"
+if not defined POWER_BUTTON echo LOI: POWER_PERCENT chi duoc phep la 0, 40, 70 hoac 100.
 if not defined POWER_BUTTON exit /b 2
 
 title AS75 - Lay va phan tich du lieu %POWER_PERCENT% phan tram
@@ -69,7 +70,8 @@ if errorlevel 1 exit /b 9
 echo.
 echo Da tim thay GDB, firmware va cong cu Python.
 echo Dong cua so Debug STM32CubeIDE neu dang mo.
-echo Khi thay thong bao ket noi SWD, chon %POWER_BUTTON% ^(%POWER_PERCENT% phan tram^) va nhan START.
+if "%POWER_PERCENT%"=="0" echo Khi ket noi SWD, nhan P3 den khi man hinh hien H  0, roi nhan START.
+if not "%POWER_PERCENT%"=="0" echo Khi ket noi SWD, chon %POWER_BUTTON% ^(%POWER_PERCENT% phan tram^) va nhan START.
 echo.
 
 py ".\tools\capture_ram_log.py" ^
@@ -80,6 +82,7 @@ py ".\tools\capture_ram_log.py" ^
   --keep-dump "%RAM%"
 
 if errorlevel 1 goto :capture_failed
+if "%POWER_PERCENT%"=="0" goto :cooling_complete
 
 echo.
 echo Da lay du lieu. Dang kiem tra va nhan dang mo hinh FOPDT...
@@ -96,6 +99,22 @@ echo MO HINH VA PID: %JSON%
 echo.
 echo CANH BAO: Thong so PID chi la diem khoi dau. Can thu o cong suat thap,
 echo gioi han dau ra va luon giu bao ve qua nhiet khi dua vao firmware.
+exit /b 0
+
+:cooling_complete
+echo.
+echo Da lay du lieu. Dang ve do thi va nhan dang mo hinh nguoi...
+py ".\tools\analyze_cooling.py" "%CSV%" --svg "%SVG%" --json "%JSON%"
+if errorlevel 1 goto :analysis_failed
+
+popd
+echo.
+echo DA LAY XONG VA PHAN TICH DU LIEU NGUOI 0 PHAN TRAM.
+echo CSV: %CSV%
+echo RAM: %RAM%
+echo DO THI: %SVG%
+echo MO HINH NGUOI: %JSON%
+echo LUU Y: Can them log gia nhiet de tinh PID.
 exit /b 0
 
 :capture_failed
