@@ -1,8 +1,9 @@
-# AS75 – nhận dạng nhiệt và tìm thông số PID
+# AS75 – lấy mẫu manual để nhận dạng hàm truyền lò
 
-Firmware hiện chạy ở chế độ **thí nghiệm đáp ứng bước hở vòng**, thay cho chu
-trình tiệt trùng tự động. Mục đích là ghi nhiệt độ theo thời gian tại ba mức
-công suất và một lần nguội tự nhiên 0% để nhận dạng mô hình nhiệt chung.
+Firmware thực hiện thí nghiệm hở vòng **giữ u1 → tăng lên u2**, ghi nhiệt độ
+PT100 thực để nhận dạng gần đúng khâu quán tính bậc nhất có trễ quanh vùng làm
+việc. Thang u là **0–255**. Firmware này không chạy PID hoặc tự giữ nhiệt độ;
+người vận hành chọn u sao cho lò tự đạt cân bằng nhiệt.
 
 ## Bảng chân để tạo project mới
 
@@ -15,17 +16,17 @@ phải sửa lại tên chân trong mã nguồn.
 
 | Nhãn trong code | Chân MCU | Cấu hình CubeMX | Chức năng / mức tác động |
 |---|---|---|---|
-| `B_P1` | PC0 | GPIO Input, No pull | Nút chọn 100%, tác động mức cao |
-| `B_P2` | PC1 | GPIO Input, No pull | Nút chọn 70%, tác động mức cao |
-| `B_P3` | PC2 | GPIO Input, No pull | Nút chọn 40%, tác động mức cao |
+| `B_P1` | PC0 | GPIO Input, No pull | Nút tăng u, tác động mức cao |
+| `B_P2` | PC1 | GPIO Input, No pull | Nút giảm u, tác động mức cao |
+| `B_P3` | PC2 | GPIO Input, No pull | Nút áp dụng u, tác động mức cao |
 | `B_Start` | PC6 | GPIO Input, No pull | Nút chạy/dừng, tác động mức cao |
-| `LD_P1` | PD2 | GPIO Output, Push-pull, Low speed, No pull | LED mức 100%, bật mức cao |
-| `LD_P2` | PD1 | GPIO Output, Push-pull, Low speed, No pull | LED mức 70%, bật mức cao |
-| `LD_P3` | PD0 | GPIO Output, Push-pull, Low speed, No pull | LED mức 40%, bật mức cao |
+| `LD_P1` | PD2 | GPIO Output, Push-pull, Low speed, No pull | LED nút tăng u, bật mức cao |
+| `LD_P2` | PD1 | GPIO Output, Push-pull, Low speed, No pull | LED nút giảm u, bật mức cao |
+| `LD_P3` | PD0 | GPIO Output, Push-pull, Low speed, No pull | LED nút áp dụng u, bật mức cao |
 | `LD_Start` | PD6 | GPIO Output, Push-pull, Low speed, No pull | LED đang chạy, bật mức cao |
 | `SSR_Heater` | PE10 | GPIO Output, Push-pull, Low speed, No pull | SSR thanh đốt, bật mức cao |
 | `Buzzer` | PB10 | GPIO Output, Push-pull, Low speed, No pull | Còi, bật mức cao |
-| `CLK1` / `DIO1` | PB6 / PB7 | GPIO Output Open-drain, Pull-up, Very high speed | Màn hình TM1637 số 1 (mức công suất) |
+| `CLK1` / `DIO1` | PB6 / PB7 | GPIO Output Open-drain, Pull-up, Very high speed | Màn hình TM1637 số 1 (giá trị u đặt trước) |
 | `CLK2` / `DIO2` | PB8 / PB9 | GPIO Output Open-drain, Pull-up, Very high speed | Màn hình TM1637 số 2 (nhiệt độ) |
 | `CS` | PA4 | GPIO Output, Push-pull, Low speed, No pull | Chip-select MAX31865, phần mềm điều khiển |
 | SPI3 SCK / MISO / MOSI | PB3 / PB4 / PB5 | AF6 SPI3, Push-pull, Very high speed, No pull | Giao tiếp MAX31865/PT100 |
@@ -58,26 +59,73 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
 4. Không cần chép thư mục `tools/` vào firmware. Thư mục này chỉ chạy trên máy
    tính để lấy và phân tích log.
 
-## Cách chạy thí nghiệm
+## Chuẩn bị và tìm u1/u2
 
-1. Nối ST-Link vào hai chân **SWDIO/SWCLK** đang dùng để nạp chương trình. Không
-   cần chân SWO, UART hay thay đổi phần cứng.
-2. Cấp nước và đóng cửa thủ công, sau đó chờ kiểm tra PT100 hoàn tất. Firmware
-   thí nghiệm không đọc cảm biến mức nước hoặc công tắc cửa.
-3. Nhấn **P1 = 100%**, **P2 = 70%**, hoặc **P3 = 40%**. Nhấn P3 lần nữa để
-   chuyển qua lại giữa **40% và 0%**. Màn hình 1 hiện `H100`, `H 70`, `H 40`
-   hoặc `H  0`; ở 0% LED P3 vẫn sáng để chỉ nhóm lựa chọn P3.
-4. Nhấn **START**. Firmware xóa log cũ trong RAM, điều chế SSR theo cửa sổ 10
-   giây, **ghi một mẫu mỗi 10 giây** và tự dừng sau **35 phút**. Riêng lựa chọn
-   0%, firmware tự gia nhiệt 100% đến 110 °C, hạ xuống 30% đến 121 °C rồi tắt
-   SSR và ghi quá trình nguội trong **60 phút**. Nhấn START lần
-   nữa để dừng sớm. Mảng `gHeaterTestLog` chứa tối đa 361 bản ghi (mẫu tại
-   `t=0`, các mẫu định kỳ và một bản ghi trạng thái kết thúc), chiếm khoảng
-   4,4 KiB RAM; trường `complete` đổi thành 1 sau khi dừng.
-5. Để hệ thống nguội về cùng nhiệt độ ban đầu rồi mới chạy mức công suất kế
-   tiếp. Nên lưu mỗi mức vào một file riêng (`step_100.csv`, `step_70.csv`,
-   `step_40.csv`). Vì hai liên động đã bị vô hiệu hóa, người vận hành phải tự
-   xác nhận đủ nước và cửa đã đóng chắc chắn trước khi nhấn START.
+1. Chọn vùng nhiệt độ làm việc và giới hạn nhiệt độ cho phép của thí nghiệm.
+   Giữ nguyên lượng nước/tải, cửa và điều kiện môi trường giữa hai pha.
+   Nếu có số u của PID khi giữ ổn định ở vùng đó, dùng làm điểm tham khảo;
+   firmware hiện tại chỉ cung cấp manual.
+2. Xác nhận đủ nước và cửa đóng. Firmware không đọc liên động nước/cửa.
+   Bảo vệ PT100 và ngắt khi số đo chưa qua lọc đạt **138 °C** vẫn hoạt động;
+   đây không thay thế giới hạn riêng của thí nghiệm.
+3. Dò công suất bằng các nút bên dưới. Khởi động mặc định **u=0**. Bắt đầu
+   thấp, tăng từng bước phù hợp rồi chờ đủ lâu. Chưa có số liệu để ấn định
+   u1/u2 hay bảo đảm một u cụ thể sẽ an toàn/đạt xác lập.
+4. Chọn **u2 > u1**, sao cho cả T1 và T2 cân bằng nằm trong vùng cho phép và
+   chênh nhiệt đủ lớn so với nhiễu. Nhiệt độ còn tăng không tự chứng minh
+   u quá cao: có thể chưa chờ đủ lâu, tải/điều kiện thay đổi hoặc lỗi đo.
+5. Kết thúc lần dò, lưu nếu cần, rồi bắt đầu lần đo chính thức ở u1. Lần đo
+   chính thức chỉ có **một bước u1 → u2** để phân tích tự động rõ ràng.
+
+## Thao tác nút và lấy mẫu chính thức
+
+| Nút | Khi dừng | Khi đang chạy |
+|---|---|---|
+| P1 | Tăng u đặt trước 1 đơn vị | Chỉ tăng u đặt trước; chưa đổi SSR |
+| P2 | Giảm u đặt trước 1 đơn vị | Chỉ giảm u đặt trước; chưa đổi SSR |
+| P3 | Không gia nhiệt | Chốt u đặt trước để áp dụng ở đầu chu kỳ 10 s kế tiếp |
+| START | Xóa log cũ, chạy manual tại u đặt trước | Tắt SSR, ghi trạng thái STOP, hoàn tất log |
+
+Giữ P1/P2 sẽ lặp sau 1 giây, mỗi 0,5 giây một đơn vị. Màn hình 1 hiện
+`u000`…`u255`; dấu chấm ở chữ số cuối sáng khi giá trị đặt trước khác u đang
+áp dụng hoặc có lệnh đang chờ. P3 chốt giá trị tại thời điểm bấm; chỉnh P1/P2
+sau đó không thay lệnh đã chốt, trừ khi bấm P3 lại. LED P1/P2/P3 chỉ nút vừa
+thao tác; LED START cho biết đang chạy.
+
+1. Chạy script lấy log trên máy tính trước (xem dưới). Đặt u1 bằng P1/P2,
+   nhấn START để bắt đầu ghi cả quá trình tiến đến T1.
+2. Giữ u1 đến khi nhiệt độ ổn định. Không cần đường nhiệt nằm ngang tuyệt đối:
+   xét cả biên độ dao động và xu hướng trong một khoảng đủ dài. Mặc định tool
+   kiểm tra **ít nhất 5 phút**, biên max–min **≤1 °C**, độ dốc hồi quy
+   **≤0,05 °C/phút** theo trị tuyệt đối. Đây là ngưỡng khởi đầu cần điều chỉnh
+   theo yêu cầu thực tế, không phải thông số vật lý đã xác nhận của lò.
+3. Chỉnh u2 bằng P1/P2 (lò vẫn chạy u1), nhấn P3 đúng một lần. Firmware giữ
+   nguyên mốc cửa sổ SSR và đổi u ở đầu cửa sổ kế tiếp; log thêm sự kiện
+   `POWER_CHANGE` theo thời điểm **áp dụng thực tế**, không theo thời điểm bấm.
+4. Giữ nguyên u2 đến khi T2 ổn định trong cùng tiêu chí. Tiếp tục ghi đủ đoạn
+   cuối xác lập; T2 rất quan trọng nhưng vẫn phải giữ T1 và Δu để tính độ lợi.
+5. Nhấn START để dừng và tự xuất RAM/CSV qua SWD. Không reset/mất nguồn trước
+   khi lấy log; không nhấn START lần nữa vì sẽ xóa lần đo vừa xong.
+
+Chu kỳ SSR luôn là **ton + toff = 10 s**, với
+`ton = floor(10000 × u / 255) ms`, `toff = 10000 − ton`.
+Chu kỳ lấy mẫu độc lập: danh định **1 s/mẫu**, kiểm tra/đọc PT100 mỗi **300 ms**.
+Do lịch đọc 300 ms, khoảng cách mẫu thực có thể khoảng 0,9–1,2 s; dùng
+`elapsed_ms` thực tế để vẽ/khớp mô hình. MAX31865 chạy chuyển đổi liên tục,
+giảm chặn vòng lặp do chờ one-shot. Điều chế dùng vòng lặp phần mềm nên có
+sai lệch nhỏ do SPI/hiển thị; cần xác nhận trên bo nếu yêu cầu thời gian chặt.
+
+Log lưu **nhiệt độ đo chưa qua bộ lọc hiển thị** (vẫn có hiệu chỉnh -5 °C vốn
+có trong driver, không phải giá trị ADC thô). Màn hình dùng nhiệt độ đã lọc;
+bảo vệ quá nhiệt dùng nhiệt độ chưa qua lọc để tránh trễ do lọc phần mềm.
+
+Không tự kết thúc sau 35 phút. Log có 7204 bản ghi, chiếm **86.472 byte RAM**,
+giới hạn tối đa **120 phút cho cả hai pha**; nhiều sự kiện đổi u có thể làm đầy
+sớm hơn. Khi đầy, timeout, dừng tay hoặc lỗi, firmware tắt SSR rồi hoàn tất log.
+`DONE`/timeout **không có nghĩa** nhiệt độ đã xác lập. Nếu chưa đạt T2 thì cần
+điều chỉnh phép đo; không kết luận hàm truyền từ việc hết giờ. STM32F407VG có
+128 KiB SRAM thông thường, nhưng phải kiểm tra báo cáo RAM của project CubeIDE
+thực tế khi thêm log vào chương trình khác.
 
 ## Chuyển log RAM lên máy qua SWD
 
@@ -96,7 +144,7 @@ Debug đang mở trong STM32CubeIDE, rồi chạy lệnh sau **trước khi nh�
 
 ```bash
 python3 tools/capture_ram_log.py \
-  --start-openocd --elf build/firmware.elf --csv step_70.csv
+  --start-openocd --elf build/firmware.elf --csv manual_step.csv
 ```
 
 Tùy chọn `--start-openocd` tự chạy lệnh tương đương:
@@ -115,7 +163,7 @@ Nếu máy báo không tìm thấy chương trình, truyền đường dẫn c�
 python3 tools/capture_ram_log.py --start-openocd \
   --openocd "C:/OpenOCD/bin/openocd.exe" \
   --gdb "C:/GNUArmEmbedded/bin/arm-none-eabi-gdb.exe" \
-  --elf "Debug/ten_project.elf" --csv step_70.csv
+  --elf "Debug/ten_project.elf" --csv manual_step.csv
 ```
 
 ### Nếu muốn tự mở server trong cửa sổ riêng
@@ -131,20 +179,20 @@ Terminal 2 và chạy (không thêm `--start-openocd`):
 
 ```bash
 python3 tools/capture_ram_log.py \
-  --elf build/firmware.elf --csv step_70.csv
+  --elf build/firmware.elf --csv manual_step.csv
 ```
 
 Script kết nối qua SWD, cho CPU chạy và chờ cờ `gHeaterTestLog.complete`. Sau
-khi người vận hành nhấn START, toàn bộ các bước lấy mẫu 10 giây/lần, lưu RAM,
-chờ phép đo hoàn tất (35 phút khi gia nhiệt, 60 phút khi nguội, hoặc dừng sớm),
+khi người vận hành nhấn START, toàn bộ các bước lấy mẫu danh định 1 giây/lần, lưu RAM,
+chờ nhấn START để dừng (hoặc đạt giới hạn 120 phút/bộ nhớ),
 halt CPU, dump RAM và tạo CSV đều tự
 động. Không cần nhấn Pause hay nhập thêm lệnh GDB. Tùy chọn
 `--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
 không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
 
 Các thư mục cha trong đường dẫn `--csv` và `--keep-dump` sẽ được tạo tự động.
-Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/step_100.csv --keep-dump
-data/heater_ram_100.bin`, kể cả khi thư mục `data` chưa tồn tại. Điều này cũng
+Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/manual_step.csv --keep-dump
+data/manual_ram.bin`, kể cả khi thư mục `data` chưa tồn tại. Điều này cũng
 đảm bảo GDB ghi được dump khi nhấn START lần nữa để dừng thí nghiệm sớm.
 Trên Windows, script tự chuyển đường dẫn gửi cho GDB sang dấu `/`; file `.bat`
 vẫn có thể truyền đường dẫn bằng dấu `\\` như bình thường.
@@ -156,7 +204,7 @@ xPack GDB trên Windows không tự tạo được file đích của lệnh `dum
 
 STM32 không thể tự gửi dữ liệu chỉ qua dây SWD nếu trên máy tính không có một
 GDB server và chương trình đang chờ nhận; vì vậy chỉ cần khởi chạy script một
-lần trước thí nghiệm, sau đó thao tác duy nhất trên thiết bị là nhấn START.
+lần trước thí nghiệm, sau đó chỉnh u, áp dụng bước bằng P3 và chạy/dừng bằng START.
 
 ### Trích xuất thủ công khi cần
 
@@ -181,27 +229,35 @@ có thể dùng địa chỉ/kích thước mà GDB trả về từ `p &gHeaterT
 Chuyển file nhị phân thành CSV:
 
 ```bash
-python3 tools/extract_ram_log.py heater_ram.bin --csv step_70.csv
+python3 tools/extract_ram_log.py heater_ram.bin --csv manual_step.csv
 ```
 
 Script cũng chấp nhận một file dump toàn bộ SRAM vì nó tự tìm chữ ký
-`HTLOG001`. CSV xuất ra có dạng:
+`HTLOG001`. CSV firmware mới có dạng:
 
 ```csv
-elapsed_ms,power_percent,heater_on,temperature_c,status
-1000,70,1,27.4,RUN
+elapsed_ms,power_percent,heater_on,temperature_c,status,control_u,control_u_max
+0,20,1,80.1,RUN,51,255
+600003,24,1,80.2,POWER_CHANGE,61,255
+600105,24,1,80.1,RUN,61,255
 ```
 
-`heater_on` cho biết trạng thái SSR thực tế trong cửa sổ điều chế. Dù chỉ lưu
-một mẫu mỗi 10 giây, firmware vẫn đọc PT100 mỗi 300 ms và ngắt thanh đốt khi
-PT100 lỗi hoặc nhiệt độ vượt 138 °C. Firmware không cấu hình cảm biến mức nước
-và công tắc cửa, nên người vận hành phải tự kiểm tra hai điều kiện này.
+`power_percent` được làm tròn để đọc nhanh; nhận dạng dùng chính xác
+`control_u/control_u_max`. `heater_on` là trạng thái SSR tại bản ghi, không phải
+công suất trung bình. `POWER_CHANGE.elapsed_ms` đánh dấu thời điểm firmware
+áp dụng u2; nhiệt độ trong bản ghi sự kiện là số đo gần nhất (có thể cũ tối đa
+khoảng 300 ms). Các mẫu `RUN` ghi thời điểm đọc cảm biến thực tế, không nội suy
+hay điền lại những mẫu bị lỡ. Mẫu kết thúc phản ánh SSR đã tắt; nếu lỗi cảm biến,
+nhiệt độ trong bản ghi kết thúc là số đo hợp lệ gần nhất.
+
+Tool vẫn giải mã được log nhị phân phiên bản 1 và CSV cũ. Log mới là phiên bản
+2, bản ghi vẫn 12 byte; không dùng tool cũ để đọc vì sẽ mất giá trị u chính xác.
 
 ## Lưu ý khi cập nhật project STM32CubeIDE
 
-Repo vẫn giữ các file PID và USB do project CubeIDE đã sinh có thể còn liệt kê chúng
-trong `Debug/*/subdir.mk`. Firmware thử nghiệm không gọi các module này, nhưng xóa file
-khỏi repo mà chưa xóa chúng khỏi cấu hình build sẽ làm incremental build thất bại.
+Project CubeIDE cũ có thể còn liệt kê các module PID/USB trong
+`Debug/*/subdir.mk`. Cần cập nhật cấu hình build nếu các file đó đã bị loại bỏ;
+firmware manual hiện tại không dùng các module này.
 
 Khi chép mã vào project CubeIDE hiện có:
 
@@ -212,89 +268,67 @@ Khi chép mã vào project CubeIDE hiện có:
 3. Chọn **Project > Clean...**, sau đó **Refresh** và build lại. Việc clean sẽ tạo
    lại `subdir.mk`, tránh make tiếp tục biên dịch đường dẫn của file đã xóa hoặc di chuyển.
 
-## Dựng biểu đồ, hàm truyền và PID
-
-Chạy công cụ không cần thư viện Python ngoài:
+## Đồ thị thực nghiệm và hàm truyền
 
 ```bash
-python3 tools/analyze_heater_step.py step_70.csv \
-  --svg step_70.svg --json step_70_model.json
+python3 tools/analyze_heater_step.py manual_step.csv \
+  --svg manual_step.svg --json manual_step_model.json
 ```
 
-Công cụ ước lượng mô hình bậc nhất có trễ (FOPDT):
+Đồ thị gồm nhiệt độ đo thực, đường mô hình riêng và u thực theo thời gian;
+đường đứng đánh dấu thời điểm đổi u. Nếu thiếu bước, có nhiều bước hoặc chưa
+đủ mẫu, tool vẫn xuất đồ thị thực và JSON nêu lý do, trả mã **2**. Không gộp
+lần dò nhiều mức thành một phép đo bước duy nhất.
 
-```text
-                  K exp(-L s)
-G(s) =            -----------
-                    T s + 1
-```
+Biểu đồ SVG hiển thị nhiệt độ đầu/cuối, min/max, tổng thời gian và số mẫu.
+Trục thời gian có cả **phút:giây và giây**. Bảng bên phải ghi T1, nhiệt độ trung
+bình đoạn cuối T2, thời điểm đổi u, thời gian trễ L, hằng số thời gian τ và độ
+trôi nhiệt độ cuối nếu nhận dạng được. Nhãn **chưa xác lập** chỉ rõ khi nhiệt độ
+cuối chưa thể coi là nhiệt độ cân bằng. Mốc 63,2% là giá trị theo mô hình;
+nếu mốc nằm ngoài thời gian đo, biểu đồ ghi rõ và không vẽ thành điểm đo thực.
 
-Trong đó `K` là độ tăng °C trên một đơn vị công suất (1.0 = 100%), `L` là thời
-gian trễ và `T` là hằng số thời gian. File SVG chồng đường đo và đường mô hình;
-file JSON chứa hệ số hàm truyền và `pid_kp`, `pid_ki_per_s`, `pid_kd_s` theo
-phương pháp IMC bảo thủ. Công cụ khớp toàn bộ đường đo bằng bình phương tối
-thiểu, đồng thời ghi `fit_rmse_c`, `fit_r_squared`, `tail_slope_c_per_min` và
-`steady_state_reached` để đánh giá chất lượng. Nếu đoạn cuối còn tăng/giảm rõ
-hoặc thời gian đo chưa đủ ba hằng số thời gian, các khóa PID được ghi là
-`null` thay vì xuất một bộ số có độ chính xác giả. Khi chỉ cần xem giá trị ngoại
-suy để nghiên cứu, có thể thêm `--allow-unsettled-pid`; không dùng tùy chọn này
-để lấy thông số đưa thẳng vào máy.
+Mở SVG bằng Chrome/Edge/Firefox rồi rê chuột lên đường đo để xem chính xác
+`t`, nhiệt độ và u ở từng mẫu. Ảnh PNG chỉ là bản xem tĩnh. Các tool dùng chung
+`tools/thermal_chart.py`; khi chép tool sang máy khác phải chép kèm file này
+(hoặc chép cả thư mục `tools`). Cách chạy `.bat` không đổi.
 
-Khi dữ liệu chưa đạt các điều kiện trên, công cụ vẫn ghi SVG và JSON chẩn đoán
-nhưng trả mã lỗi `2`. Vì vậy file `.bat` dùng `if errorlevel 1` sẽ tự đi tới
-nhánh `analysis_failed` và không thông báo nhầm rằng dữ liệu đã dùng được cho
-PID. Nếu truyền `--allow-unsettled-pid`, công cụ xuất PID ngoại suy và trả mã
-thành công `0` để phục vụ phân tích thủ công.
+Thư mục `data/charts/` chứa các biểu đồ mới dựng lại từ năm log cũ, gồm cả
+đường nguội 0%; dữ liệu CSV, dump RAM và các JSON cũ giữ nguyên. Các thông số
+hiển thị trên bản SVG mới được tính lại bằng công cụ hiện tại.
 
-Ba khóa bắt đầu bằng `firmware_pid_` đã được nhân 255 để dùng trực tiếp với
-thang đầu ra 0..255 khi khôi phục điều khiển PID. Đây chỉ là điểm khởi đầu:
-kiểm tra ở công suất thấp, giới hạn đầu ra và giữ bảo vệ quá nhiệt khi đưa PID
-trở lại máy.
-
-## Đo nguội 0% và nhận dạng mô hình nhiệt chung
-
-Không cần chạy lại các mức 40–100%. Sau khi hoàn tất các log gia nhiệt hiện
-có, thực hiện thêm đúng một lần nguội tự nhiên. Chế độ này tự thực hiện cả pha
-gia nhiệt ban đầu và pha ghi đường nguội:
-
-1. Khi máy đang dừng, nhấn P3 cho đến khi màn hình công suất hiện `H  0`.
-2. Xác nhận đủ nước, cửa đóng chắc chắn, sau đó nhấn START. Màn hình công suất
-   đổi sang `H100`; firmware bật SSR 100% để gia nhiệt nhanh đến **110 °C**.
-   Tại 110 °C, công suất tự hạ xuống **30%** và màn hình đổi sang `H 30`. Việc
-   giảm công suất sớm hạn chế quán tính nhiệt làm nhiệt độ vượt quá 121 °C.
-   Pha gia nhiệt có giới hạn 35 phút và vẫn kiểm tra PT100/quá nhiệt 300 ms/lần.
-3. Khi nhiệt độ đạt 121 °C, firmware tắt SSR ngay, phát hai tiếng bíp, đưa màn
-   hình công suất về `H  0`, xóa các mẫu của pha gia nhiệt và bắt đầu mốc `t=0`
-   của log nguội. Vì vậy CSV 0% chỉ chứa dữ liệu cần cho phép khớp đường nguội.
-4. Giữ nguyên cửa, lượng nước và trạng thái hệ thống. SSR luôn tắt trong pha
-   này; firmware ghi nhiệt độ mỗi 10 giây và tự kết thúc sau 60 phút. Có thể
-   nhấn START để dừng sau tối thiểu 35 phút nếu cần.
-5. Lấy log như bình thường và lưu thành `data/0_1/step_0.csv`.
-
-Sau đó kết hợp log nguội với tất cả log gia nhiệt trong một lệnh:
+Với log mới, tool lấy trung bình đoạn cuối của pha u1 để xác định T1, khớp
+đoạn sau bước u2, kiểm tra xác lập T1/T2 theo cửa sổ thời gian. Điều kiện
+thêm để xuất PID mặc định là R² ≥0,90 và thời gian sau bước đủ L+3τ.
+Có thể thay các ngưỡng thực nghiệm đã thống nhất:
 
 ```bash
-python3 tools/analyze_thermal_model.py \
-  --cooling data/0_1/step_0.csv \
-  data/40_1/step_40.csv data/40_2/step_40.csv \
-  data/70_1/step_70.csv data/100_1/step_100.csv \
-  --json data/thermal_model.json
+python3 tools/analyze_heater_step.py manual_step.csv \
+  --steady-window-s 300 --steady-band-c 1 --steady-slope-c-per-min 0.05 \
+  --svg manual_step.svg --json manual_step_model.json
 ```
 
-Công cụ trước hết khớp đường nguội theo
-`T(t) = Ta + (T0 - Ta) exp(-t/tau)` để tìm nhiệt độ môi trường `Ta` và hằng số
-thời gian `tau`. Sau đó các đoạn gia nhiệt được ghép lại để tìm `K` trong mô
-hình cân bằng năng lượng:
+Mô hình làm việc theo **biến gia số quanh (u1,T1)**:
 
 ```text
-dT/dt = -(T - Ta)/tau + (K/tau) u
+ΔT(s) / Δu(s) = Ku × exp(-L s) / (τ s + 1)
+Ku ≈ (T2 − T1) / (u2 − u1)       [°C / đơn vị u]
 ```
 
-JSON kết quả chứa `ambient_temperature_c`, `time_constant_s`,
-`process_gain_c_per_fraction`, chỉ số khớp đường nguội, sai số phương trình
-trên toàn bộ dữ liệu gia nhiệt và bộ `pi_kp`, `pi_ki_per_s`, `pi_kd_s = 0`.
-Mặc định công cụ dùng IMC bảo thủ với `lambda = tau`; có thể truyền
-`--lambda-s` để nghiên cứu một đáp ứng khác. Các khóa `firmware_pi_` đã được
-đổi sang thang SSR 0–255. Vẫn phải thử kín vòng thận trọng ở 121 °C với giới
-hạn đầu ra, anti-windup, thời gian ON/OFF tối thiểu và bảo vệ quá nhiệt trước
-khi vận hành.
+`step_time_s` là mốc đổi u; thời gian dùng cho đáp ứng là `t − step_time_s`.
+JSON có `u1`, `u2`, `initial_temperature_c`, `measured_final_temperature_c`,
+`measured_process_gain_c_per_u` (từ T1/T2 khi cả hai đạt xác lập),
+`process_gain_c_per_u` (từ khớp đường cong), `dead_time_s`, `time_constant_s`
+và các chỉ số dao động/độ dốc. `process_gain_c_per_fraction` dùng đầu vào
+chuẩn hóa 0–1, bằng Ku ×255; phân biệt hai đơn vị khi dùng hàm truyền.
+
+Đầu ra PID chỉ là ước lượng IMC ban đầu; các khóa `firmware_pid_*_0_to_255`
+đã quy đổi sang thang 0–255. Khi T1/T2 chưa đạt, fit kém hoặc kết thúc do lỗi/
+đầy RAM, mặc định tool không xuất PID. `--allow-unsettled-pid` chỉ phục vụ
+nghiên cứu giá trị ngoại suy; không dùng thay cho phép đo xác lập.
+
+## Dữ liệu cũ
+
+Các thư mục `data/0_1`, `40_1`, `40_2`, `70_1`, `100_1` giữ nguyên số đo cũ.
+Các tool phân tích nguội/nhiệt chung vẫn đọc được CSV cũ để đối chiếu, nhưng
+chế độ tự gia nhiệt rồi nguội 0% và chọn cố định 40/70/100% đã được thay bằng
+manual. Không xem số liệu cũ là phép đo u1 → u2 quanh vùng làm việc mới.

@@ -1,0 +1,334 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="990" viewBox="0 0 1360 990">
+<title>Đáp ứng nhiệt theo thời gian</title>
+<desc>Thí nghiệm công suất cố định · đường đo thực và mô hình được thể hiện riêng. Blue: actual PT100 readings; dashed red: model estimates. Each measured point has time, temperature and applied u in its tooltip.</desc>
+<style>text{font-family:Arial,"DejaVu Sans",sans-serif;fill:#243447} .muted{fill:#61758b} .small{font-size:12px} .hover-point{fill:#1765bb;fill-opacity:0;stroke-opacity:0;pointer-events:all} .hover-point:hover{fill-opacity:1;stroke:white;stroke-width:2;stroke-opacity:1} .value-label{paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}</style>
+<defs><clipPath id="temperature-clip"><rect x="90" y="230" width="880" height="365"/></clipPath></defs>
+<rect width="100%" height="100%" fill="#f4f7fb"/>
+<rect x="60" y="195" width="935" height="710" rx="12" fill="white"/>
+<rect x="1005" y="195" width="325" height="710" rx="12" fill="white"/>
+<text x="60.0" y="38.0" font-size="25" text-anchor="start" font-weight="700">Đáp ứng nhiệt theo thời gian</text>
+<text x="60.0" y="65.0" font-size="14" text-anchor="start" style="fill:#61758b" >Thí nghiệm công suất cố định · đường đo thực và mô hình được thể hiện riêng</text>
+<rect x="60" y="90" width="310" height="85" rx="10" fill="white"/>
+<text x="76.0" y="112.0" font-size="11" text-anchor="start" style="fill:#61758b" font-weight="700">NHIỆT ĐỘ ĐẦU</text>
+<text x="76.0" y="140.0" font-size="23" text-anchor="start" font-weight="700">33.2 °C</text>
+<text x="76.0" y="161.0" font-size="12" text-anchor="start" style="fill:#61758b" >t = 0.000 s (00:00)</text>
+<rect x="380" y="90" width="310" height="85" rx="10" fill="white"/>
+<text x="396.0" y="112.0" font-size="11" text-anchor="start" style="fill:#61758b" font-weight="700">NHIỆT ĐỘ CUỐI</text>
+<text x="396.0" y="140.0" font-size="23" text-anchor="start" font-weight="700">74.5 °C</text>
+<text x="396.0" y="161.0" font-size="12" text-anchor="start" style="fill:#61758b" >t = 2091.000 s (34:51)</text>
+<rect x="700" y="90" width="310" height="85" rx="10" fill="white"/>
+<text x="716.0" y="112.0" font-size="11" text-anchor="start" style="fill:#61758b" font-weight="700">THỜI GIAN GHI MẪU</text>
+<text x="716.0" y="140.0" font-size="23" text-anchor="start" font-weight="700">34:51</text>
+<text x="716.0" y="161.0" font-size="12" text-anchor="start" style="fill:#61758b" >2091.000 s · 206 mẫu</text>
+<rect x="1020" y="90" width="310" height="85" rx="10" fill="white"/>
+<text x="1036.0" y="112.0" font-size="11" text-anchor="start" style="fill:#61758b" font-weight="700">MIN / MAX ĐO ĐƯỢC</text>
+<text x="1036.0" y="140.0" font-size="23" text-anchor="start" font-weight="700">33.2 / 74.5 °C</text>
+<text x="1036.0" y="161.0" font-size="12" text-anchor="start" style="fill:#61758b" >Chênh đầu–cuối: +41.3 °C</text>
+<line x1="90" y1="214" x2="116" y2="214" stroke="#1765bb" stroke-width="3"/>
+<text x="123.0" y="218.0" font-size="13" text-anchor="start" >Nhiệt độ đo thực</text>
+<line x1="300" y1="214" x2="326" y2="214" stroke="#cf4b45" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="333.0" y="218.0" font-size="13" text-anchor="start" >Mô hình ước tính</text>
+<text x="960.0" y="218.0" font-size="12" text-anchor="end" style="fill:#61758b" >Đơn vị: °C</text>
+<line x1="90" y1="511.5" x2="970" y2="511.5" stroke="#e5ebf2"/>
+<text x="78.0" y="515.5" font-size="12" text-anchor="end" style="fill:#61758b" >40</text>
+<line x1="90" y1="369.8" x2="970" y2="369.8" stroke="#e5ebf2"/>
+<text x="78.0" y="373.8" font-size="12" text-anchor="end" style="fill:#61758b" >60</text>
+<line x1="90.0" y1="230" x2="90.0" y2="595" stroke="#e5ebf2"/>
+<line x1="90.0" y1="745" x2="90.0" y2="855" stroke="#e5ebf2"/>
+<text x="90.0" y="620.0" font-size="13" text-anchor="middle" >00:00</text>
+<text x="90.0" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(0.0 s)</text>
+<text x="90.0" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >00:00</text>
+<line x1="236.7" y1="230" x2="236.7" y2="595" stroke="#e5ebf2"/>
+<line x1="236.7" y1="745" x2="236.7" y2="855" stroke="#e5ebf2"/>
+<text x="236.7" y="620.0" font-size="13" text-anchor="middle" >05:48</text>
+<text x="236.7" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(348.5 s)</text>
+<text x="236.7" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >05:48</text>
+<line x1="383.3" y1="230" x2="383.3" y2="595" stroke="#e5ebf2"/>
+<line x1="383.3" y1="745" x2="383.3" y2="855" stroke="#e5ebf2"/>
+<text x="383.3" y="620.0" font-size="13" text-anchor="middle" >11:37</text>
+<text x="383.3" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(697.0 s)</text>
+<text x="383.3" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >11:37</text>
+<line x1="530.0" y1="230" x2="530.0" y2="595" stroke="#e5ebf2"/>
+<line x1="530.0" y1="745" x2="530.0" y2="855" stroke="#e5ebf2"/>
+<text x="530.0" y="620.0" font-size="13" text-anchor="middle" >17:26</text>
+<text x="530.0" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(1045.5 s)</text>
+<text x="530.0" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >17:26</text>
+<line x1="676.7" y1="230" x2="676.7" y2="595" stroke="#e5ebf2"/>
+<line x1="676.7" y1="745" x2="676.7" y2="855" stroke="#e5ebf2"/>
+<text x="676.7" y="620.0" font-size="13" text-anchor="middle" >23:14</text>
+<text x="676.7" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(1394.0 s)</text>
+<text x="676.7" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >23:14</text>
+<line x1="823.3" y1="230" x2="823.3" y2="595" stroke="#e5ebf2"/>
+<line x1="823.3" y1="745" x2="823.3" y2="855" stroke="#e5ebf2"/>
+<text x="823.3" y="620.0" font-size="13" text-anchor="middle" >29:02</text>
+<text x="823.3" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(1742.5 s)</text>
+<text x="823.3" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >29:02</text>
+<line x1="970.0" y1="230" x2="970.0" y2="595" stroke="#e5ebf2"/>
+<line x1="970.0" y1="745" x2="970.0" y2="855" stroke="#e5ebf2"/>
+<text x="970.0" y="620.0" font-size="13" text-anchor="middle" >34:51</text>
+<text x="970.0" y="638.0" font-size="11" text-anchor="middle" style="fill:#61758b" >(2091.0 s)</text>
+<text x="970.0" y="876.0" font-size="12" text-anchor="middle" style="fill:#61758b" >34:51</text>
+<path d="M90 230V595H970" fill="none" stroke="#9aaabd"/>
+<path d="M90 745V855H970" fill="none" stroke="#9aaabd"/>
+<text x="25.0" y="435.0" font-size="14" text-anchor="start" transform="rotate(-90 25 435)">Nhiệt độ (°C)</text>
+<text x="530.0" y="663.0" font-size="13" text-anchor="middle" >Thời gian của log: phút:giây (số giây trong ngoặc)</text>
+<line x1="90" y1="559.7" x2="970" y2="559.7" stroke="#91a4b9" stroke-dasharray="3 5"><title>T1 / nhiệt độ đầu mô hình = 33.20 °C</title></line>
+<line x1="90" y1="284.6" x2="970" y2="284.6" stroke="#91a4b9" stroke-dasharray="3 5"><title>TB cuối đoạn đo = 72.02 °C</title></line>
+<g clip-path="url(#temperature-clip)">
+<polyline points="90.0,559.7 94.3,559.7 98.6,559.7 102.9,559.7 107.2,559.7 111.5,559.0 115.8,558.3 120.0,556.8 124.3,554.7 128.6,553.3 132.9,551.9 137.2,549.8 141.5,549.0 145.8,548.3 150.1,546.9 154.4,546.2 158.7,544.1 163.0,542.7 167.3,541.3 171.6,539.8 175.9,537.7 180.1,535.6 184.4,534.2 188.7,532.7 193.0,530.6 197.3,529.2 201.6,527.1 205.9,525.7 210.2,523.5 214.5,522.1 218.8,520.7 223.1,517.9 227.4,516.4 231.7,514.3 236.0,512.9 240.2,511.5 244.5,509.4 248.8,507.9 253.1,505.8 257.4,503.7 261.7,502.3 266.0,500.1 270.3,498.7 274.6,497.3 278.9,495.9 283.2,494.5 287.5,493.1 291.8,491.6 296.0,489.5 300.3,488.1 304.6,487.4 308.9,486.0 313.2,483.8 317.5,482.4 321.8,481.0 326.1,478.2 330.4,477.5 334.7,476.1 339.0,473.9 343.3,472.5 347.6,470.4 351.9,469.7 356.1,469.0 360.4,467.5 364.7,465.4 369.0,463.3 373.3,462.6 377.6,460.5 381.9,459.0 386.2,456.9 390.5,455.5 394.8,454.1 399.1,453.4 403.4,452.0 407.7,449.8 412.0,448.4 416.2,447.0 420.5,445.6 424.8,444.2 429.1,442.7 433.4,441.3 437.7,440.6 442.0,438.5 446.3,436.4 450.6,435.0 454.9,432.8 459.2,431.4 463.5,429.3 467.8,427.2 472.0,426.4 476.3,425.0 480.6,423.6 484.9,420.8 489.2,420.1 493.5,418.7 497.8,417.9 502.1,415.8 506.4,415.1 510.7,413.7 515.0,411.6 519.3,410.1 523.6,408.7 527.9,407.3 532.1,406.6 536.4,405.9 540.7,403.8 545.0,401.6 549.3,399.5 553.6,398.8 557.9,396.7 562.2,394.6 566.5,393.8 570.8,391.7 575.1,391.0 579.4,389.6 583.7,388.2 588.0,387.5 592.2,385.3 596.5,382.5 600.8,381.8 605.1,381.1 609.4,379.7 613.7,376.8 618.0,374.7 622.3,374.0 626.6,371.9 630.9,370.5 635.2,369.0 639.5,366.9 643.8,366.2 648.0,365.5 652.3,363.4 656.6,362.0 660.9,360.5 665.2,359.1 669.5,357.7 673.8,356.3 678.1,354.2 682.4,352.0 686.7,351.3 691.0,351.3 695.3,350.6 699.6,349.2 703.9,348.5 708.1,347.1 712.4,344.9 716.7,342.8 721.0,340.7 725.3,340.0 729.6,338.6 733.9,337.2 738.2,335.7 742.5,333.6 746.8,332.2 751.1,331.5 755.4,328.6 759.7,327.2 764.0,327.2 768.2,327.2 772.5,325.8 776.8,323.7 781.1,322.3 785.4,322.3 789.7,321.6 794.0,320.1 798.3,317.3 802.6,315.9 806.9,314.5 811.2,313.1 815.5,310.9 819.8,310.2 824.0,309.5 828.3,308.8 832.6,308.1 836.9,306.7 841.2,304.6 845.5,302.4 849.8,300.3 854.1,299.6 858.4,298.2 862.7,296.0 867.0,293.9 871.3,293.2 875.6,293.2 879.9,293.2 884.1,291.8 888.4,291.1 892.7,288.3 897.0,288.3 901.3,286.8 905.6,286.1 909.9,285.4 914.2,283.3 918.5,281.2 922.8,279.7 927.1,277.6 931.4,276.9 935.7,276.2 940.0,275.5 944.2,274.8 948.5,273.4 952.8,273.4 957.1,271.2 961.4,269.8 965.7,269.1 970.0,267.0" fill="none" stroke="#1765bb" stroke-width="2"/>
+<polyline points="90.0,559.7 94.3,559.7 98.6,559.7 102.9,559.7 107.2,559.7 111.5,559.7 115.8,559.7 120.0,558.7 124.3,556.9 128.6,555.2 132.9,553.5 137.2,551.8 141.5,550.1 145.8,548.4 150.1,546.7 154.4,545.0 158.7,543.3 163.0,541.6 167.3,539.9 171.6,538.2 175.9,536.6 180.1,534.9 184.4,533.2 188.7,531.5 193.0,529.8 197.3,528.2 201.6,526.5 205.9,524.8 210.2,523.2 214.5,521.5 218.8,519.8 223.1,518.2 227.4,516.5 231.7,514.9 236.0,513.2 240.2,511.6 244.5,509.9 248.8,508.3 253.1,506.7 257.4,505.0 261.7,503.4 266.0,501.8 270.3,500.1 274.6,498.5 278.9,496.9 283.2,495.3 287.5,493.6 291.8,492.0 296.0,490.4 300.3,488.8 304.6,487.2 308.9,485.6 313.2,484.0 317.5,482.4 321.8,480.8 326.1,479.2 330.4,477.6 334.7,476.0 339.0,474.4 343.3,472.8 347.6,471.2 351.9,469.6 356.1,468.1 360.4,466.5 364.7,464.9 369.0,463.3 373.3,461.8 377.6,460.2 381.9,458.6 386.2,457.1 390.5,455.5 394.8,454.0 399.1,452.4 403.4,450.8 407.7,449.3 412.0,447.8 416.2,446.2 420.5,444.7 424.8,443.1 429.1,441.6 433.4,440.0 437.7,438.5 442.0,437.0 446.3,435.4 450.6,433.9 454.9,432.4 459.2,430.9 463.5,429.3 467.8,427.8 472.0,426.3 476.3,424.8 480.6,423.3 484.9,421.8 489.2,420.3 493.5,418.8 497.8,417.3 502.1,415.8 506.4,414.3 510.7,412.8 515.0,411.3 519.3,409.8 523.6,408.3 527.9,406.8 532.1,405.3 536.4,403.9 540.7,402.4 545.0,400.9 549.3,399.4 553.6,397.9 557.9,396.5 562.2,395.0 566.5,393.5 570.8,392.1 575.1,390.6 579.4,389.2 583.7,387.7 588.0,386.3 592.2,384.8 596.5,383.3 600.8,381.9 605.1,380.5 609.4,379.0 613.7,377.6 618.0,376.1 622.3,374.7 626.6,373.3 630.9,371.8 635.2,370.4 639.5,369.0 643.8,367.5 648.0,366.1 652.3,364.7 656.6,363.3 660.9,361.9 665.2,360.4 669.5,359.0 673.8,357.6 678.1,356.2 682.4,354.8 686.7,353.4 691.0,352.0 695.3,350.6 699.6,349.2 703.9,347.8 708.1,346.4 712.4,345.0 716.7,343.6 721.0,342.2 725.3,340.9 729.6,339.5 733.9,338.1 738.2,336.7 742.5,335.3 746.8,334.0 751.1,332.6 755.4,331.2 759.7,329.9 764.0,328.5 768.2,327.1 772.5,325.8 776.8,324.4 781.1,323.0 785.4,321.7 789.7,320.3 794.0,319.0 798.3,317.6 802.6,316.3 806.9,314.9 811.2,313.6 815.5,312.3 819.8,310.9 824.0,309.6 828.3,308.3 832.6,306.9 836.9,305.6 841.2,304.3 845.5,302.9 849.8,301.6 854.1,300.3 858.4,299.0 862.7,297.6 867.0,296.3 871.3,295.0 875.6,293.7 879.9,292.4 884.1,291.1 888.4,289.8 892.7,288.5 897.0,287.2 901.3,285.9 905.6,284.6 909.9,283.3 914.2,282.0 918.5,280.7 922.8,279.4 927.1,278.1 931.4,276.8 935.7,275.5 940.0,274.2 944.2,273.0 948.5,271.7 952.8,270.4 957.1,269.1 961.4,267.9 965.7,266.6 970.0,265.3" fill="none" stroke="#cf4b45" stroke-width="2" stroke-dasharray="8 5"/>
+</g>
+<line data-marker="Bắt đầu bước" data-time-s="0.000000" x1="90.0" y1="230" x2="90.0" y2="595" stroke="#54687e" stroke-dasharray="5 5" opacity="0.65"><title>Bắt đầu bước: 0.000 s (00:00)</title></line>
+<line x1="90.0" y1="745" x2="90.0" y2="855" stroke="#54687e" stroke-dasharray="5 5" opacity="0.65"/>
+<text x="97.0" y="250.0" font-size="12" text-anchor="start" style="fill:#54687e" class="value-label">Bắt đầu bước: 00:00</text>
+<line data-marker="Hết trễ L" data-time-s="65.343750" x1="117.5" y1="230" x2="117.5" y2="595" stroke="#ae7b21" stroke-dasharray="5 5" opacity="0.65"><title>Hết trễ L: 65.344 s (01:05)</title></line>
+<line x1="117.5" y1="745" x2="117.5" y2="855" stroke="#ae7b21" stroke-dasharray="5 5" opacity="0.65"/>
+<text x="124.5" y="273.0" font-size="12" text-anchor="start" style="fill:#ae7b21" class="value-label">Hết trễ L: 01:05</text>
+<circle cx="117.5" cy="559.7" r="5" fill="#ae7b21" stroke="white" stroke-width="2"><title>Hết trễ L: 33.20 °C; 65.344 s (01:05)</title></circle>
+<circle cx="90.0" cy="559.7" r="4" fill="#1765bb"/>
+<text x="100.0" y="547.7" font-size="13" text-anchor="start" style="fill:#1765bb" class="value-label">33.2 °C · 00:00</text>
+<circle cx="970.0" cy="267.0" r="4" fill="#1765bb"/>
+<text x="960.0" y="255.0" font-size="13" text-anchor="end" style="fill:#1765bb" class="value-label">74.5 °C · 34:51</text>
+<circle class="hover-point" data-time-s="0.000000" data-temperature-c="33.200000" cx="90.0" cy="559.7" r="5"><title>t = 0.000 s (00:00); T = 33.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="10.200000" data-temperature-c="33.200000" cx="94.3" cy="559.7" r="5"><title>t = 10.200 s (00:10); T = 33.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="20.400000" data-temperature-c="33.200000" cx="98.6" cy="559.7" r="5"><title>t = 20.400 s (00:20); T = 33.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="30.600000" data-temperature-c="33.200000" cx="102.9" cy="559.7" r="5"><title>t = 30.600 s (00:31); T = 33.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="40.800000" data-temperature-c="33.200000" cx="107.2" cy="559.7" r="5"><title>t = 40.800 s (00:41); T = 33.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="51.000000" data-temperature-c="33.300000" cx="111.5" cy="559.0" r="5"><title>t = 51.000 s (00:51); T = 33.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="61.200000" data-temperature-c="33.400000" cx="115.8" cy="558.3" r="5"><title>t = 61.200 s (01:01); T = 33.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="71.400000" data-temperature-c="33.600000" cx="120.0" cy="556.8" r="5"><title>t = 71.400 s (01:11); T = 33.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="81.600000" data-temperature-c="33.900000" cx="124.3" cy="554.7" r="5"><title>t = 81.600 s (01:22); T = 33.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="91.800000" data-temperature-c="34.100000" cx="128.6" cy="553.3" r="5"><title>t = 91.800 s (01:32); T = 34.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="102.000000" data-temperature-c="34.300000" cx="132.9" cy="551.9" r="5"><title>t = 102.000 s (01:42); T = 34.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="112.200000" data-temperature-c="34.600000" cx="137.2" cy="549.8" r="5"><title>t = 112.200 s (01:52); T = 34.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="122.400000" data-temperature-c="34.700000" cx="141.5" cy="549.0" r="5"><title>t = 122.400 s (02:02); T = 34.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="132.600000" data-temperature-c="34.800000" cx="145.8" cy="548.3" r="5"><title>t = 132.600 s (02:13); T = 34.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="142.800000" data-temperature-c="35.000000" cx="150.1" cy="546.9" r="5"><title>t = 142.800 s (02:23); T = 35.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="153.000000" data-temperature-c="35.100000" cx="154.4" cy="546.2" r="5"><title>t = 153.000 s (02:33); T = 35.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="163.200000" data-temperature-c="35.400000" cx="158.7" cy="544.1" r="5"><title>t = 163.200 s (02:43); T = 35.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="173.400000" data-temperature-c="35.600000" cx="163.0" cy="542.7" r="5"><title>t = 173.400 s (02:53); T = 35.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="183.600000" data-temperature-c="35.800000" cx="167.3" cy="541.3" r="5"><title>t = 183.600 s (03:04); T = 35.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="193.800000" data-temperature-c="36.000000" cx="171.6" cy="539.8" r="5"><title>t = 193.800 s (03:14); T = 36.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="204.000000" data-temperature-c="36.300000" cx="175.9" cy="537.7" r="5"><title>t = 204.000 s (03:24); T = 36.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="214.200000" data-temperature-c="36.600000" cx="180.1" cy="535.6" r="5"><title>t = 214.200 s (03:34); T = 36.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="224.400000" data-temperature-c="36.800000" cx="184.4" cy="534.2" r="5"><title>t = 224.400 s (03:44); T = 36.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="234.600000" data-temperature-c="37.000000" cx="188.7" cy="532.7" r="5"><title>t = 234.600 s (03:55); T = 37.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="244.800000" data-temperature-c="37.300000" cx="193.0" cy="530.6" r="5"><title>t = 244.800 s (04:05); T = 37.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="255.000000" data-temperature-c="37.500000" cx="197.3" cy="529.2" r="5"><title>t = 255.000 s (04:15); T = 37.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="265.200000" data-temperature-c="37.800000" cx="201.6" cy="527.1" r="5"><title>t = 265.200 s (04:25); T = 37.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="275.400000" data-temperature-c="38.000000" cx="205.9" cy="525.7" r="5"><title>t = 275.400 s (04:35); T = 38.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="285.600000" data-temperature-c="38.300000" cx="210.2" cy="523.5" r="5"><title>t = 285.600 s (04:46); T = 38.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="295.800000" data-temperature-c="38.500000" cx="214.5" cy="522.1" r="5"><title>t = 295.800 s (04:56); T = 38.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="306.000000" data-temperature-c="38.700000" cx="218.8" cy="520.7" r="5"><title>t = 306.000 s (05:06); T = 38.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="316.200000" data-temperature-c="39.100000" cx="223.1" cy="517.9" r="5"><title>t = 316.200 s (05:16); T = 39.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="326.400000" data-temperature-c="39.300000" cx="227.4" cy="516.4" r="5"><title>t = 326.400 s (05:26); T = 39.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="336.600000" data-temperature-c="39.600000" cx="231.7" cy="514.3" r="5"><title>t = 336.600 s (05:37); T = 39.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="346.800000" data-temperature-c="39.800000" cx="236.0" cy="512.9" r="5"><title>t = 346.800 s (05:47); T = 39.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="357.000000" data-temperature-c="40.000000" cx="240.2" cy="511.5" r="5"><title>t = 357.000 s (05:57); T = 40.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="367.200000" data-temperature-c="40.300000" cx="244.5" cy="509.4" r="5"><title>t = 367.200 s (06:07); T = 40.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="377.400000" data-temperature-c="40.500000" cx="248.8" cy="507.9" r="5"><title>t = 377.400 s (06:17); T = 40.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="387.600000" data-temperature-c="40.800000" cx="253.1" cy="505.8" r="5"><title>t = 387.600 s (06:28); T = 40.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="397.800000" data-temperature-c="41.100000" cx="257.4" cy="503.7" r="5"><title>t = 397.800 s (06:38); T = 41.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="408.000000" data-temperature-c="41.300000" cx="261.7" cy="502.3" r="5"><title>t = 408.000 s (06:48); T = 41.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="418.200000" data-temperature-c="41.600000" cx="266.0" cy="500.1" r="5"><title>t = 418.200 s (06:58); T = 41.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="428.400000" data-temperature-c="41.800000" cx="270.3" cy="498.7" r="5"><title>t = 428.400 s (07:08); T = 41.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="438.600000" data-temperature-c="42.000000" cx="274.6" cy="497.3" r="5"><title>t = 438.600 s (07:19); T = 42.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="448.800000" data-temperature-c="42.200000" cx="278.9" cy="495.9" r="5"><title>t = 448.800 s (07:29); T = 42.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="459.000000" data-temperature-c="42.400000" cx="283.2" cy="494.5" r="5"><title>t = 459.000 s (07:39); T = 42.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="469.200000" data-temperature-c="42.600000" cx="287.5" cy="493.1" r="5"><title>t = 469.200 s (07:49); T = 42.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="479.400000" data-temperature-c="42.800000" cx="291.8" cy="491.6" r="5"><title>t = 479.400 s (07:59); T = 42.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="489.600000" data-temperature-c="43.100000" cx="296.0" cy="489.5" r="5"><title>t = 489.600 s (08:10); T = 43.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="499.800000" data-temperature-c="43.300000" cx="300.3" cy="488.1" r="5"><title>t = 499.800 s (08:20); T = 43.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="510.000000" data-temperature-c="43.400000" cx="304.6" cy="487.4" r="5"><title>t = 510.000 s (08:30); T = 43.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="520.200000" data-temperature-c="43.600000" cx="308.9" cy="486.0" r="5"><title>t = 520.200 s (08:40); T = 43.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="530.400000" data-temperature-c="43.900000" cx="313.2" cy="483.8" r="5"><title>t = 530.400 s (08:50); T = 43.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="540.600000" data-temperature-c="44.100000" cx="317.5" cy="482.4" r="5"><title>t = 540.600 s (09:01); T = 44.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="550.800000" data-temperature-c="44.300000" cx="321.8" cy="481.0" r="5"><title>t = 550.800 s (09:11); T = 44.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="561.000000" data-temperature-c="44.700000" cx="326.1" cy="478.2" r="5"><title>t = 561.000 s (09:21); T = 44.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="571.200000" data-temperature-c="44.800000" cx="330.4" cy="477.5" r="5"><title>t = 571.200 s (09:31); T = 44.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="581.400000" data-temperature-c="45.000000" cx="334.7" cy="476.1" r="5"><title>t = 581.400 s (09:41); T = 45.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="591.600000" data-temperature-c="45.300000" cx="339.0" cy="473.9" r="5"><title>t = 591.600 s (09:52); T = 45.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="601.800000" data-temperature-c="45.500000" cx="343.3" cy="472.5" r="5"><title>t = 601.800 s (10:02); T = 45.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="612.000000" data-temperature-c="45.800000" cx="347.6" cy="470.4" r="5"><title>t = 612.000 s (10:12); T = 45.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="622.200000" data-temperature-c="45.900000" cx="351.9" cy="469.7" r="5"><title>t = 622.200 s (10:22); T = 45.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="632.400000" data-temperature-c="46.000000" cx="356.1" cy="469.0" r="5"><title>t = 632.400 s (10:32); T = 46.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="642.600000" data-temperature-c="46.200000" cx="360.4" cy="467.5" r="5"><title>t = 642.600 s (10:43); T = 46.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="652.800000" data-temperature-c="46.500000" cx="364.7" cy="465.4" r="5"><title>t = 652.800 s (10:53); T = 46.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="663.000000" data-temperature-c="46.800000" cx="369.0" cy="463.3" r="5"><title>t = 663.000 s (11:03); T = 46.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="673.200000" data-temperature-c="46.900000" cx="373.3" cy="462.6" r="5"><title>t = 673.200 s (11:13); T = 46.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="683.400000" data-temperature-c="47.200000" cx="377.6" cy="460.5" r="5"><title>t = 683.400 s (11:23); T = 47.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="693.600000" data-temperature-c="47.400000" cx="381.9" cy="459.0" r="5"><title>t = 693.600 s (11:34); T = 47.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="703.800000" data-temperature-c="47.700000" cx="386.2" cy="456.9" r="5"><title>t = 703.800 s (11:44); T = 47.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="714.000000" data-temperature-c="47.900000" cx="390.5" cy="455.5" r="5"><title>t = 714.000 s (11:54); T = 47.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="724.200000" data-temperature-c="48.100000" cx="394.8" cy="454.1" r="5"><title>t = 724.200 s (12:04); T = 48.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="734.400000" data-temperature-c="48.200000" cx="399.1" cy="453.4" r="5"><title>t = 734.400 s (12:14); T = 48.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="744.600000" data-temperature-c="48.400000" cx="403.4" cy="452.0" r="5"><title>t = 744.600 s (12:25); T = 48.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="754.800000" data-temperature-c="48.700000" cx="407.7" cy="449.8" r="5"><title>t = 754.800 s (12:35); T = 48.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="765.000000" data-temperature-c="48.900000" cx="412.0" cy="448.4" r="5"><title>t = 765.000 s (12:45); T = 48.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="775.200000" data-temperature-c="49.100000" cx="416.2" cy="447.0" r="5"><title>t = 775.200 s (12:55); T = 49.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="785.400000" data-temperature-c="49.300000" cx="420.5" cy="445.6" r="5"><title>t = 785.400 s (13:05); T = 49.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="795.600000" data-temperature-c="49.500000" cx="424.8" cy="444.2" r="5"><title>t = 795.600 s (13:16); T = 49.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="805.800000" data-temperature-c="49.700000" cx="429.1" cy="442.7" r="5"><title>t = 805.800 s (13:26); T = 49.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="816.000000" data-temperature-c="49.900000" cx="433.4" cy="441.3" r="5"><title>t = 816.000 s (13:36); T = 49.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="826.200000" data-temperature-c="50.000000" cx="437.7" cy="440.6" r="5"><title>t = 826.200 s (13:46); T = 50.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="836.400000" data-temperature-c="50.300000" cx="442.0" cy="438.5" r="5"><title>t = 836.400 s (13:56); T = 50.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="846.600000" data-temperature-c="50.600000" cx="446.3" cy="436.4" r="5"><title>t = 846.600 s (14:07); T = 50.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="856.800000" data-temperature-c="50.800000" cx="450.6" cy="435.0" r="5"><title>t = 856.800 s (14:17); T = 50.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="867.000000" data-temperature-c="51.100000" cx="454.9" cy="432.8" r="5"><title>t = 867.000 s (14:27); T = 51.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="877.200000" data-temperature-c="51.300000" cx="459.2" cy="431.4" r="5"><title>t = 877.200 s (14:37); T = 51.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="887.400000" data-temperature-c="51.600000" cx="463.5" cy="429.3" r="5"><title>t = 887.400 s (14:47); T = 51.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="897.600000" data-temperature-c="51.900000" cx="467.8" cy="427.2" r="5"><title>t = 897.600 s (14:58); T = 51.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="907.800000" data-temperature-c="52.000000" cx="472.0" cy="426.4" r="5"><title>t = 907.800 s (15:08); T = 52.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="918.000000" data-temperature-c="52.200000" cx="476.3" cy="425.0" r="5"><title>t = 918.000 s (15:18); T = 52.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="928.200000" data-temperature-c="52.400000" cx="480.6" cy="423.6" r="5"><title>t = 928.200 s (15:28); T = 52.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="938.400000" data-temperature-c="52.800000" cx="484.9" cy="420.8" r="5"><title>t = 938.400 s (15:38); T = 52.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="948.600000" data-temperature-c="52.900000" cx="489.2" cy="420.1" r="5"><title>t = 948.600 s (15:49); T = 52.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="958.800000" data-temperature-c="53.100000" cx="493.5" cy="418.7" r="5"><title>t = 958.800 s (15:59); T = 53.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="969.000000" data-temperature-c="53.200000" cx="497.8" cy="417.9" r="5"><title>t = 969.000 s (16:09); T = 53.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="979.200000" data-temperature-c="53.500000" cx="502.1" cy="415.8" r="5"><title>t = 979.200 s (16:19); T = 53.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="989.400000" data-temperature-c="53.600000" cx="506.4" cy="415.1" r="5"><title>t = 989.400 s (16:29); T = 53.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="999.600000" data-temperature-c="53.800000" cx="510.7" cy="413.7" r="5"><title>t = 999.600 s (16:40); T = 53.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1009.800000" data-temperature-c="54.100000" cx="515.0" cy="411.6" r="5"><title>t = 1009.800 s (16:50); T = 54.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1020.000000" data-temperature-c="54.300000" cx="519.3" cy="410.1" r="5"><title>t = 1020.000 s (17:00); T = 54.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1030.200000" data-temperature-c="54.500000" cx="523.6" cy="408.7" r="5"><title>t = 1030.200 s (17:10); T = 54.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1040.400000" data-temperature-c="54.700000" cx="527.9" cy="407.3" r="5"><title>t = 1040.400 s (17:20); T = 54.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1050.600000" data-temperature-c="54.800000" cx="532.1" cy="406.6" r="5"><title>t = 1050.600 s (17:31); T = 54.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1060.800000" data-temperature-c="54.900000" cx="536.4" cy="405.9" r="5"><title>t = 1060.800 s (17:41); T = 54.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1071.000000" data-temperature-c="55.200000" cx="540.7" cy="403.8" r="5"><title>t = 1071.000 s (17:51); T = 55.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1081.200000" data-temperature-c="55.500000" cx="545.0" cy="401.6" r="5"><title>t = 1081.200 s (18:01); T = 55.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1091.400000" data-temperature-c="55.800000" cx="549.3" cy="399.5" r="5"><title>t = 1091.400 s (18:11); T = 55.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1101.600000" data-temperature-c="55.900000" cx="553.6" cy="398.8" r="5"><title>t = 1101.600 s (18:22); T = 55.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1111.800000" data-temperature-c="56.200000" cx="557.9" cy="396.7" r="5"><title>t = 1111.800 s (18:32); T = 56.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1122.000000" data-temperature-c="56.500000" cx="562.2" cy="394.6" r="5"><title>t = 1122.000 s (18:42); T = 56.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1132.200000" data-temperature-c="56.600000" cx="566.5" cy="393.8" r="5"><title>t = 1132.200 s (18:52); T = 56.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1142.400000" data-temperature-c="56.900000" cx="570.8" cy="391.7" r="5"><title>t = 1142.400 s (19:02); T = 56.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1152.600000" data-temperature-c="57.000000" cx="575.1" cy="391.0" r="5"><title>t = 1152.600 s (19:13); T = 57.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1162.800000" data-temperature-c="57.200000" cx="579.4" cy="389.6" r="5"><title>t = 1162.800 s (19:23); T = 57.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1173.000000" data-temperature-c="57.400000" cx="583.7" cy="388.2" r="5"><title>t = 1173.000 s (19:33); T = 57.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1183.200000" data-temperature-c="57.500000" cx="588.0" cy="387.5" r="5"><title>t = 1183.200 s (19:43); T = 57.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1193.400000" data-temperature-c="57.800000" cx="592.2" cy="385.3" r="5"><title>t = 1193.400 s (19:53); T = 57.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1203.600000" data-temperature-c="58.200000" cx="596.5" cy="382.5" r="5"><title>t = 1203.600 s (20:04); T = 58.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1213.800000" data-temperature-c="58.300000" cx="600.8" cy="381.8" r="5"><title>t = 1213.800 s (20:14); T = 58.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1224.000000" data-temperature-c="58.400000" cx="605.1" cy="381.1" r="5"><title>t = 1224.000 s (20:24); T = 58.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1234.200000" data-temperature-c="58.600000" cx="609.4" cy="379.7" r="5"><title>t = 1234.200 s (20:34); T = 58.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1244.400000" data-temperature-c="59.000000" cx="613.7" cy="376.8" r="5"><title>t = 1244.400 s (20:44); T = 59.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1254.600000" data-temperature-c="59.300000" cx="618.0" cy="374.7" r="5"><title>t = 1254.600 s (20:55); T = 59.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1264.800000" data-temperature-c="59.400000" cx="622.3" cy="374.0" r="5"><title>t = 1264.800 s (21:05); T = 59.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1275.000000" data-temperature-c="59.700000" cx="626.6" cy="371.9" r="5"><title>t = 1275.000 s (21:15); T = 59.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1285.200000" data-temperature-c="59.900000" cx="630.9" cy="370.5" r="5"><title>t = 1285.200 s (21:25); T = 59.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1295.400000" data-temperature-c="60.100000" cx="635.2" cy="369.0" r="5"><title>t = 1295.400 s (21:35); T = 60.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1305.600000" data-temperature-c="60.400000" cx="639.5" cy="366.9" r="5"><title>t = 1305.600 s (21:46); T = 60.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1315.800000" data-temperature-c="60.500000" cx="643.8" cy="366.2" r="5"><title>t = 1315.800 s (21:56); T = 60.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1326.000000" data-temperature-c="60.600000" cx="648.0" cy="365.5" r="5"><title>t = 1326.000 s (22:06); T = 60.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1336.200000" data-temperature-c="60.900000" cx="652.3" cy="363.4" r="5"><title>t = 1336.200 s (22:16); T = 60.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1346.400000" data-temperature-c="61.100000" cx="656.6" cy="362.0" r="5"><title>t = 1346.400 s (22:26); T = 61.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1356.600000" data-temperature-c="61.300000" cx="660.9" cy="360.5" r="5"><title>t = 1356.600 s (22:37); T = 61.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1366.800000" data-temperature-c="61.500000" cx="665.2" cy="359.1" r="5"><title>t = 1366.800 s (22:47); T = 61.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1377.000000" data-temperature-c="61.700000" cx="669.5" cy="357.7" r="5"><title>t = 1377.000 s (22:57); T = 61.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1387.200000" data-temperature-c="61.900000" cx="673.8" cy="356.3" r="5"><title>t = 1387.200 s (23:07); T = 61.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1397.400000" data-temperature-c="62.200000" cx="678.1" cy="354.2" r="5"><title>t = 1397.400 s (23:17); T = 62.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1407.600000" data-temperature-c="62.500000" cx="682.4" cy="352.0" r="5"><title>t = 1407.600 s (23:28); T = 62.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1417.800000" data-temperature-c="62.600000" cx="686.7" cy="351.3" r="5"><title>t = 1417.800 s (23:38); T = 62.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1428.000000" data-temperature-c="62.600000" cx="691.0" cy="351.3" r="5"><title>t = 1428.000 s (23:48); T = 62.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1438.200000" data-temperature-c="62.700000" cx="695.3" cy="350.6" r="5"><title>t = 1438.200 s (23:58); T = 62.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1448.400000" data-temperature-c="62.900000" cx="699.6" cy="349.2" r="5"><title>t = 1448.400 s (24:08); T = 62.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1458.600000" data-temperature-c="63.000000" cx="703.9" cy="348.5" r="5"><title>t = 1458.600 s (24:19); T = 63.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1468.800000" data-temperature-c="63.200000" cx="708.1" cy="347.1" r="5"><title>t = 1468.800 s (24:29); T = 63.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1479.000000" data-temperature-c="63.500000" cx="712.4" cy="344.9" r="5"><title>t = 1479.000 s (24:39); T = 63.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1489.200000" data-temperature-c="63.800000" cx="716.7" cy="342.8" r="5"><title>t = 1489.200 s (24:49); T = 63.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1499.400000" data-temperature-c="64.100000" cx="721.0" cy="340.7" r="5"><title>t = 1499.400 s (24:59); T = 64.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1509.600000" data-temperature-c="64.200000" cx="725.3" cy="340.0" r="5"><title>t = 1509.600 s (25:10); T = 64.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1519.800000" data-temperature-c="64.400000" cx="729.6" cy="338.6" r="5"><title>t = 1519.800 s (25:20); T = 64.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1530.000000" data-temperature-c="64.600000" cx="733.9" cy="337.2" r="5"><title>t = 1530.000 s (25:30); T = 64.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1540.200000" data-temperature-c="64.800000" cx="738.2" cy="335.7" r="5"><title>t = 1540.200 s (25:40); T = 64.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1550.400000" data-temperature-c="65.100000" cx="742.5" cy="333.6" r="5"><title>t = 1550.400 s (25:50); T = 65.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1560.600000" data-temperature-c="65.300000" cx="746.8" cy="332.2" r="5"><title>t = 1560.600 s (26:01); T = 65.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1570.800000" data-temperature-c="65.400000" cx="751.1" cy="331.5" r="5"><title>t = 1570.800 s (26:11); T = 65.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1581.000000" data-temperature-c="65.800000" cx="755.4" cy="328.6" r="5"><title>t = 1581.000 s (26:21); T = 65.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1591.200000" data-temperature-c="66.000000" cx="759.7" cy="327.2" r="5"><title>t = 1591.200 s (26:31); T = 66.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1601.400000" data-temperature-c="66.000000" cx="764.0" cy="327.2" r="5"><title>t = 1601.400 s (26:41); T = 66.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1611.600000" data-temperature-c="66.000000" cx="768.2" cy="327.2" r="5"><title>t = 1611.600 s (26:52); T = 66.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1621.800000" data-temperature-c="66.200000" cx="772.5" cy="325.8" r="5"><title>t = 1621.800 s (27:02); T = 66.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1632.000000" data-temperature-c="66.500000" cx="776.8" cy="323.7" r="5"><title>t = 1632.000 s (27:12); T = 66.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1642.200000" data-temperature-c="66.700000" cx="781.1" cy="322.3" r="5"><title>t = 1642.200 s (27:22); T = 66.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1652.400000" data-temperature-c="66.700000" cx="785.4" cy="322.3" r="5"><title>t = 1652.400 s (27:32); T = 66.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1662.600000" data-temperature-c="66.800000" cx="789.7" cy="321.6" r="5"><title>t = 1662.600 s (27:43); T = 66.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1672.800000" data-temperature-c="67.000000" cx="794.0" cy="320.1" r="5"><title>t = 1672.800 s (27:53); T = 67.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1683.000000" data-temperature-c="67.400000" cx="798.3" cy="317.3" r="5"><title>t = 1683.000 s (28:03); T = 67.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1693.200000" data-temperature-c="67.600000" cx="802.6" cy="315.9" r="5"><title>t = 1693.200 s (28:13); T = 67.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1703.400000" data-temperature-c="67.800000" cx="806.9" cy="314.5" r="5"><title>t = 1703.400 s (28:23); T = 67.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1713.600000" data-temperature-c="68.000000" cx="811.2" cy="313.1" r="5"><title>t = 1713.600 s (28:34); T = 68.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1723.800000" data-temperature-c="68.300000" cx="815.5" cy="310.9" r="5"><title>t = 1723.800 s (28:44); T = 68.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1734.000000" data-temperature-c="68.400000" cx="819.8" cy="310.2" r="5"><title>t = 1734.000 s (28:54); T = 68.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1744.200000" data-temperature-c="68.500000" cx="824.0" cy="309.5" r="5"><title>t = 1744.200 s (29:04); T = 68.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1754.400000" data-temperature-c="68.600000" cx="828.3" cy="308.8" r="5"><title>t = 1754.400 s (29:14); T = 68.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1764.600000" data-temperature-c="68.700000" cx="832.6" cy="308.1" r="5"><title>t = 1764.600 s (29:25); T = 68.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1774.800000" data-temperature-c="68.900000" cx="836.9" cy="306.7" r="5"><title>t = 1774.800 s (29:35); T = 68.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1785.000000" data-temperature-c="69.200000" cx="841.2" cy="304.6" r="5"><title>t = 1785.000 s (29:45); T = 69.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1795.200000" data-temperature-c="69.500000" cx="845.5" cy="302.4" r="5"><title>t = 1795.200 s (29:55); T = 69.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1805.400000" data-temperature-c="69.800000" cx="849.8" cy="300.3" r="5"><title>t = 1805.400 s (30:05); T = 69.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1815.600000" data-temperature-c="69.900000" cx="854.1" cy="299.6" r="5"><title>t = 1815.600 s (30:16); T = 69.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1825.800000" data-temperature-c="70.100000" cx="858.4" cy="298.2" r="5"><title>t = 1825.800 s (30:26); T = 70.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1836.000000" data-temperature-c="70.400000" cx="862.7" cy="296.0" r="5"><title>t = 1836.000 s (30:36); T = 70.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1846.200000" data-temperature-c="70.700000" cx="867.0" cy="293.9" r="5"><title>t = 1846.200 s (30:46); T = 70.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1856.400000" data-temperature-c="70.800000" cx="871.3" cy="293.2" r="5"><title>t = 1856.400 s (30:56); T = 70.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1866.600000" data-temperature-c="70.800000" cx="875.6" cy="293.2" r="5"><title>t = 1866.600 s (31:07); T = 70.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1876.800000" data-temperature-c="70.800000" cx="879.9" cy="293.2" r="5"><title>t = 1876.800 s (31:17); T = 70.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1887.000000" data-temperature-c="71.000000" cx="884.1" cy="291.8" r="5"><title>t = 1887.000 s (31:27); T = 71.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1897.200000" data-temperature-c="71.100000" cx="888.4" cy="291.1" r="5"><title>t = 1897.200 s (31:37); T = 71.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1907.400000" data-temperature-c="71.500000" cx="892.7" cy="288.3" r="5"><title>t = 1907.400 s (31:47); T = 71.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1917.600000" data-temperature-c="71.500000" cx="897.0" cy="288.3" r="5"><title>t = 1917.600 s (31:58); T = 71.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1927.800000" data-temperature-c="71.700000" cx="901.3" cy="286.8" r="5"><title>t = 1927.800 s (32:08); T = 71.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1938.000000" data-temperature-c="71.800000" cx="905.6" cy="286.1" r="5"><title>t = 1938.000 s (32:18); T = 71.80 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1948.200000" data-temperature-c="71.900000" cx="909.9" cy="285.4" r="5"><title>t = 1948.200 s (32:28); T = 71.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1958.400000" data-temperature-c="72.200000" cx="914.2" cy="283.3" r="5"><title>t = 1958.400 s (32:38); T = 72.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1968.600000" data-temperature-c="72.500000" cx="918.5" cy="281.2" r="5"><title>t = 1968.600 s (32:49); T = 72.50 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1978.800000" data-temperature-c="72.700000" cx="922.8" cy="279.7" r="5"><title>t = 1978.800 s (32:59); T = 72.70 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1989.000000" data-temperature-c="73.000000" cx="927.1" cy="277.6" r="5"><title>t = 1989.000 s (33:09); T = 73.00 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="1999.200000" data-temperature-c="73.100000" cx="931.4" cy="276.9" r="5"><title>t = 1999.200 s (33:19); T = 73.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2009.400000" data-temperature-c="73.200000" cx="935.7" cy="276.2" r="5"><title>t = 2009.400 s (33:29); T = 73.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2019.600000" data-temperature-c="73.300000" cx="940.0" cy="275.5" r="5"><title>t = 2019.600 s (33:40); T = 73.30 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2029.800000" data-temperature-c="73.400000" cx="944.2" cy="274.8" r="5"><title>t = 2029.800 s (33:50); T = 73.40 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2040.000000" data-temperature-c="73.600000" cx="948.5" cy="273.4" r="5"><title>t = 2040.000 s (34:00); T = 73.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2050.200000" data-temperature-c="73.600000" cx="952.8" cy="273.4" r="5"><title>t = 2050.200 s (34:10); T = 73.60 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2060.400000" data-temperature-c="73.900000" cx="957.1" cy="271.2" r="5"><title>t = 2060.400 s (34:20); T = 73.90 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2070.600000" data-temperature-c="74.100000" cx="961.4" cy="269.8" r="5"><title>t = 2070.600 s (34:31); T = 74.10 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2080.800000" data-temperature-c="74.200000" cx="965.7" cy="269.1" r="5"><title>t = 2080.800 s (34:41); T = 74.20 °C; u = 102.000 (40.00%)</title></circle>
+<circle class="hover-point" data-time-s="2091.000000" data-temperature-c="74.500000" cx="970.0" cy="267.0" r="5"><title>t = 2091.000 s (34:51); T = 74.50 °C; u = 102.000 (40.00%)</title></circle>
+<text x="90.0" y="714.0" font-size="13" text-anchor="start" font-weight="700">CÔNG SUẤT ÁP DỤNG</text>
+<text x="970.0" y="714.0" font-size="12" text-anchor="end" style="fill:#61758b" >u theo thang 0–255</text>
+<line x1="90" y1="855.0" x2="970" y2="855.0" stroke="#e5ebf2"/>
+<text x="78.0" y="859.0" font-size="11" text-anchor="end" style="fill:#61758b" >0</text>
+<line x1="90" y1="800.0" x2="970" y2="800.0" stroke="#e5ebf2"/>
+<text x="78.0" y="804.0" font-size="11" text-anchor="end" style="fill:#61758b" >127.5</text>
+<line x1="90" y1="745.0" x2="970" y2="745.0" stroke="#e5ebf2"/>
+<text x="78.0" y="749.0" font-size="11" text-anchor="end" style="fill:#61758b" >255</text>
+<path d="M90.0 811.0 H94.3V811.0 H98.6V811.0 H102.9V811.0 H107.2V811.0 H111.5V811.0 H115.8V811.0 H120.0V811.0 H124.3V811.0 H128.6V811.0 H132.9V811.0 H137.2V811.0 H141.5V811.0 H145.8V811.0 H150.1V811.0 H154.4V811.0 H158.7V811.0 H163.0V811.0 H167.3V811.0 H171.6V811.0 H175.9V811.0 H180.1V811.0 H184.4V811.0 H188.7V811.0 H193.0V811.0 H197.3V811.0 H201.6V811.0 H205.9V811.0 H210.2V811.0 H214.5V811.0 H218.8V811.0 H223.1V811.0 H227.4V811.0 H231.7V811.0 H236.0V811.0 H240.2V811.0 H244.5V811.0 H248.8V811.0 H253.1V811.0 H257.4V811.0 H261.7V811.0 H266.0V811.0 H270.3V811.0 H274.6V811.0 H278.9V811.0 H283.2V811.0 H287.5V811.0 H291.8V811.0 H296.0V811.0 H300.3V811.0 H304.6V811.0 H308.9V811.0 H313.2V811.0 H317.5V811.0 H321.8V811.0 H326.1V811.0 H330.4V811.0 H334.7V811.0 H339.0V811.0 H343.3V811.0 H347.6V811.0 H351.9V811.0 H356.1V811.0 H360.4V811.0 H364.7V811.0 H369.0V811.0 H373.3V811.0 H377.6V811.0 H381.9V811.0 H386.2V811.0 H390.5V811.0 H394.8V811.0 H399.1V811.0 H403.4V811.0 H407.7V811.0 H412.0V811.0 H416.2V811.0 H420.5V811.0 H424.8V811.0 H429.1V811.0 H433.4V811.0 H437.7V811.0 H442.0V811.0 H446.3V811.0 H450.6V811.0 H454.9V811.0 H459.2V811.0 H463.5V811.0 H467.8V811.0 H472.0V811.0 H476.3V811.0 H480.6V811.0 H484.9V811.0 H489.2V811.0 H493.5V811.0 H497.8V811.0 H502.1V811.0 H506.4V811.0 H510.7V811.0 H515.0V811.0 H519.3V811.0 H523.6V811.0 H527.9V811.0 H532.1V811.0 H536.4V811.0 H540.7V811.0 H545.0V811.0 H549.3V811.0 H553.6V811.0 H557.9V811.0 H562.2V811.0 H566.5V811.0 H570.8V811.0 H575.1V811.0 H579.4V811.0 H583.7V811.0 H588.0V811.0 H592.2V811.0 H596.5V811.0 H600.8V811.0 H605.1V811.0 H609.4V811.0 H613.7V811.0 H618.0V811.0 H622.3V811.0 H626.6V811.0 H630.9V811.0 H635.2V811.0 H639.5V811.0 H643.8V811.0 H648.0V811.0 H652.3V811.0 H656.6V811.0 H660.9V811.0 H665.2V811.0 H669.5V811.0 H673.8V811.0 H678.1V811.0 H682.4V811.0 H686.7V811.0 H691.0V811.0 H695.3V811.0 H699.6V811.0 H703.9V811.0 H708.1V811.0 H712.4V811.0 H716.7V811.0 H721.0V811.0 H725.3V811.0 H729.6V811.0 H733.9V811.0 H738.2V811.0 H742.5V811.0 H746.8V811.0 H751.1V811.0 H755.4V811.0 H759.7V811.0 H764.0V811.0 H768.2V811.0 H772.5V811.0 H776.8V811.0 H781.1V811.0 H785.4V811.0 H789.7V811.0 H794.0V811.0 H798.3V811.0 H802.6V811.0 H806.9V811.0 H811.2V811.0 H815.5V811.0 H819.8V811.0 H824.0V811.0 H828.3V811.0 H832.6V811.0 H836.9V811.0 H841.2V811.0 H845.5V811.0 H849.8V811.0 H854.1V811.0 H858.4V811.0 H862.7V811.0 H867.0V811.0 H871.3V811.0 H875.6V811.0 H879.9V811.0 H884.1V811.0 H888.4V811.0 H892.7V811.0 H897.0V811.0 H901.3V811.0 H905.6V811.0 H909.9V811.0 H914.2V811.0 H918.5V811.0 H922.8V811.0 H927.1V811.0 H931.4V811.0 H935.7V811.0 H940.0V811.0 H944.2V811.0 H948.5V811.0 H952.8V811.0 H957.1V811.0 H961.4V811.0 H965.7V811.0 H970.0V811.0" fill="none" stroke="#248564" stroke-width="2.5"/>
+<text x="97.0" y="802.0" font-size="12" text-anchor="start" style="fill:#248564" class="value-label">u=102 (40.0%)</text>
+<text x="1025.0" y="222.0" font-size="14" text-anchor="start" font-weight="700">THÔNG SỐ &amp; MỐC THỜI GIAN</text>
+<text x="1025.0" y="253.0" font-size="12" text-anchor="start" style="fill:#61758b" >Công suất trong lần đo</text>
+<text x="1025.0" y="273.0" font-size="14" text-anchor="start" font-weight="600">40.0% · u = 102.0</text>
+<text x="1025.0" y="305.0" font-size="12" text-anchor="start" style="fill:#61758b" >Nhiệt độ đầu mô hình</text>
+<text x="1025.0" y="325.0" font-size="14" text-anchor="start" font-weight="600">33.20 °C</text>
+<text x="1025.0" y="357.0" font-size="12" text-anchor="start" style="fill:#61758b" >T2 — TB cuối đoạn đo</text>
+<text x="1025.0" y="377.0" font-size="14" text-anchor="start" font-weight="600">72.02 °C · chưa xác lập</text>
+<text x="1025.0" y="409.0" font-size="12" text-anchor="start" style="fill:#61758b" >Thời điểm áp dụng bước</text>
+<text x="1025.0" y="429.0" font-size="14" text-anchor="start" font-weight="600">0.000 s (00:00)</text>
+<text x="1025.0" y="461.0" font-size="12" text-anchor="start" style="fill:#61758b" >L — thời gian trễ (ước tính)</text>
+<text x="1025.0" y="481.0" font-size="14" text-anchor="start" font-weight="600">65.344 s (01:05)</text>
+<text x="1025.0" y="513.0" font-size="12" text-anchor="start" style="fill:#61758b" >τ — hằng số thời gian (ước tính)</text>
+<text x="1025.0" y="533.0" font-size="14" text-anchor="start" font-weight="600">6662.468 s (111:02)</text>
+<text x="1025.0" y="565.0" font-size="12" text-anchor="start" style="fill:#61758b" >t63,2% = t đổi u + L + τ</text>
+<text x="1025.0" y="585.0" font-size="14" text-anchor="start" font-weight="600">6727.811 s (112:08) · ngoài đoạn</text>
+<text x="1025.0" y="604.0" font-size="14" text-anchor="start" font-weight="600">đo</text>
+<text x="1025.0" y="636.0" font-size="12" text-anchor="start" style="fill:#61758b" >Độ trôi nhiệt độ cuối</text>
+<text x="1025.0" y="656.0" font-size="14" text-anchor="start" font-weight="600">+1.029 °C/phút</text>
+<text x="1025.0" y="688.0" font-size="12" text-anchor="start" style="fill:#61758b" >Sai số khớp mô hình</text>
+<text x="1025.0" y="708.0" font-size="14" text-anchor="start" font-weight="600">RMSE 0.152 °C · R² 0.9999</text>
+<text x="1025.0" y="745.0" font-size="13" text-anchor="start" style="fill:#a15c19" font-weight="700">MÔ HÌNH ƯỚC TÍNH · CHƯA ĐẠT</text>
+<text x="1025.0" y="767.0" font-size="12" text-anchor="start" style="fill:#61758b" >Nhiệt độ cuối vẫn đổi 1.029 °C/phút</text>
+<text x="1025.0" y="784.0" font-size="12" text-anchor="start" style="fill:#61758b" >hoặc phép đo chưa đủ 3T; K và T còn là</text>
+<text x="1025.0" y="801.0" font-size="12" text-anchor="start" style="fill:#61758b" >ngoại suy.</text>
+<text x="60.0" y="934.0" font-size="13" text-anchor="start" style="fill:#61758b" >Rê chuột lên điểm đo trong file SVG để xem thời gian, nhiệt độ và u chính xác.</text>
+<text x="60.0" y="956.0" font-size="12" text-anchor="start" style="fill:#61758b" >Nhiệt độ cuối / trung bình cuối chỉ là số đo; chỉ gọi là xác lập khi đạt tiêu chí kiểm tra.</text>
+</svg>

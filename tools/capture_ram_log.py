@@ -11,18 +11,18 @@ import tempfile
 import time
 from pathlib import Path
 
-from extract_ram_log import decode
+from extract_ram_log import CSV_COLUMNS, CSV_COLUMNS_V2, decode
 
-EXPECTED_LOG_CAPACITY = 361
+EXPECTED_LOG_CAPACITY = 7204
 
 
 def capacity_warning(capacity: int) -> str | None:
-    """Explain when the connected firmware cannot hold the 60-minute cooling log."""
+    """Detect an ELF or flashed firmware from the previous sampling procedure."""
     if capacity == EXPECTED_LOG_CAPACITY:
         return None
     return (
         f"CẢNH BÁO: firmware/ELF đang báo dung lượng {capacity}, không phải "
-        f"{EXPECTED_LOG_CAPACITY} bản ghi cho phép đo nguội 60 phút. "
+        f"{EXPECTED_LOG_CAPACITY} bản ghi cho phép đo manual 1 giây/mẫu. "
         "Hãy Clean/Rebuild, nạp lại "
         "firmware và kiểm tra file .bat đang trỏ tới đúng file ELF mới."
     )
@@ -66,7 +66,7 @@ def write_csv(path: Path, rows) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as output:
         writer = csv.writer(output, lineterminator="\n")
-        writer.writerow(("elapsed_ms", "power_percent", "heater_on", "temperature_c", "status"))
+        writer.writerow(CSV_COLUMNS_V2 if rows and len(rows[0]) == 7 else CSV_COLUMNS)
         writer.writerows(rows)
 
 

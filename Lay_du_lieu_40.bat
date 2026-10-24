@@ -11,18 +11,8 @@ pause >nul
 exit /b %RESULT%
 
 :main
-rem Chi can doi gia tri nay thanh 0, 40, 70 hoac 100 cho muc cong suat can thu.
-set "POWER_PERCENT=0"
-set "POWER_BUTTON="
-
-if "%POWER_PERCENT%"=="100" set "POWER_BUTTON=P1"
-if "%POWER_PERCENT%"=="70" set "POWER_BUTTON=P2"
-if "%POWER_PERCENT%"=="40" set "POWER_BUTTON=P3"
-if "%POWER_PERCENT%"=="0" set "POWER_BUTTON=P3"
-if not defined POWER_BUTTON echo LOI: POWER_PERCENT chi duoc phep la 0, 40, 70 hoac 100.
-if not defined POWER_BUTTON exit /b 2
-
-title AS75 - Lay va phan tich du lieu %POWER_PERCENT% phan tram
+rem File giu ten cu de tuong thich shortcut; firmware hien chay manual u1 den u2.
+title AS75 - Lay mau manual u1 den u2
 
 rem Project firmware STM32CubeIDE. Sua duong dan nay neu project duoc di chuyen.
 set "PROJECT_DIR=C:\Users\Admin\Documents\Works\STM\Test_CIC\AS75_MD"
@@ -31,13 +21,13 @@ set "PYTHON_PROJECT=%~dp0"
 set "GDB=C:\ST\STM32CubeIDE_1.14.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.11.3.rel1.win32_1.1.100.202309141235\tools\bin\arm-none-eabi-gdb.exe"
 set "ELF=%PROJECT_DIR%\Debug\AS75_MD.elf"
 set "DATA_DIR=%PROJECT_DIR%\data"
-set "CSV=%DATA_DIR%\step_%POWER_PERCENT%.csv"
-set "RAM=%DATA_DIR%\heater_ram_%POWER_PERCENT%.bin"
-set "SVG=%DATA_DIR%\step_%POWER_PERCENT%.svg"
-set "JSON=%DATA_DIR%\step_%POWER_PERCENT%_model.json"
+set "CSV=%DATA_DIR%\manual_step.csv"
+set "RAM=%DATA_DIR%\manual_ram.bin"
+set "SVG=%DATA_DIR%\manual_step.svg"
+set "JSON=%DATA_DIR%\manual_step_model.json"
 
 echo ==============================================
-echo AS75 - THI NGHIEM VA PHAN TICH CONG SUAT %POWER_PERCENT% PHAN TRAM
+echo AS75 - THI NGHIEM MANUAL u1 DEN u2, THANG 0-255
 echo ==============================================
 echo.
 echo Kiem tra cac file can thiet...
@@ -70,8 +60,9 @@ if errorlevel 1 exit /b 9
 echo.
 echo Da tim thay GDB, firmware va cong cu Python.
 echo Dong cua so Debug STM32CubeIDE neu dang mo.
-if "%POWER_PERCENT%"=="0" echo Khi ket noi SWD, nhan P3 den khi man hinh hien H  0, roi nhan START.
-if not "%POWER_PERCENT%"=="0" echo Khi ket noi SWD, chon %POWER_BUTTON% ^(%POWER_PERCENT% phan tram^) va nhan START.
+echo Khi ket noi SWD: P1 tang u, P2 giam u; chon u1 roi nhan START.
+echo Cho T1 on dinh; chon u2 bang P1/P2, nhan P3 de ap dung tai chu ky ke tiep.
+echo Giu u2 den T2 on dinh, nhan START de dung va luu. Chi doi u mot lan.
 echo.
 
 py ".\tools\capture_ram_log.py" ^
@@ -82,7 +73,6 @@ py ".\tools\capture_ram_log.py" ^
   --keep-dump "%RAM%"
 
 if errorlevel 1 goto :capture_failed
-if "%POWER_PERCENT%"=="0" goto :cooling_complete
 
 echo.
 echo Da lay du lieu. Dang kiem tra va nhan dang mo hinh FOPDT...
@@ -101,22 +91,6 @@ echo CANH BAO: Thong so PID chi la diem khoi dau. Can thu o cong suat thap,
 echo gioi han dau ra va luon giu bao ve qua nhiet khi dua vao firmware.
 exit /b 0
 
-:cooling_complete
-echo.
-echo Da lay du lieu. Dang ve do thi va nhan dang mo hinh nguoi...
-py ".\tools\analyze_cooling.py" "%CSV%" --svg "%SVG%" --json "%JSON%"
-if errorlevel 1 goto :analysis_failed
-
-popd
-echo.
-echo DA LAY XONG VA PHAN TICH DU LIEU NGUOI 0 PHAN TRAM.
-echo CSV: %CSV%
-echo RAM: %RAM%
-echo DO THI: %SVG%
-echo MO HINH NGUOI: %JSON%
-echo LUU Y: Can them log gia nhiet de tinh PID.
-exit /b 0
-
 :capture_failed
 popd
 echo.
@@ -127,5 +101,5 @@ exit /b 10
 popd
 echo.
 echo KET LUAN: DU LIEU CHUA THE DUNG DE TINH PID.
-echo Xem loi phan tich phia tren, sau do kiem tra cam bien va chay lai du 35 phut.
+echo Xem loi phan tich phia tren, sau do kiem tra cam bien va ghi du doan T1 va T2 on dinh truoc/sau mot buoc tang u.
 exit /b 11
