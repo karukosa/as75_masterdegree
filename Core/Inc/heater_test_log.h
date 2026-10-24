@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-/* 60 minutes at one sample/10 s, including the t=0 and final-status records. */
-#define HEATER_TEST_LOG_CAPACITY 361U
+/* Two hours at 1 Hz plus command events/final status; 86,472 bytes total. */
+#define HEATER_TEST_LOG_CAPACITY 7204U
 #define HEATER_TEST_LOG_MAGIC "HTLOG001"
-#define HEATER_TEST_LOG_VERSION 1U
+#define HEATER_TEST_LOG_VERSION 2U
 
 typedef enum {
   HEATER_LOG_STATUS_RUN = 0U,
@@ -15,7 +15,8 @@ typedef enum {
   HEATER_LOG_STATUS_SENSOR_ERROR,
   HEATER_LOG_STATUS_OVER_TEMP,
   HEATER_LOG_STATUS_DOOR_ERROR,
-  HEATER_LOG_STATUS_BUFFER_FULL
+  HEATER_LOG_STATUS_BUFFER_FULL,
+  HEATER_LOG_STATUS_POWER_CHANGE
 } HeaterTestLogStatus;
 
 typedef struct {
@@ -24,7 +25,9 @@ typedef struct {
   uint8_t powerPercent;
   uint8_t heaterOn;
   uint8_t status;
-  uint8_t reserved[3];
+  uint8_t controlU;
+  uint8_t controlUMax;
+  uint8_t reserved;
 } HeaterTestLogSample;
 
 typedef struct {
@@ -43,7 +46,7 @@ extern volatile HeaterTestLog gHeaterTestLog;
 
 void HeaterTestLog_Reset(void);
 uint8_t HeaterTestLog_Append(uint32_t elapsedMs, int16_t temperatureTenthsC,
-                             uint8_t powerPercent, uint8_t heaterOn,
+                             uint8_t controlU, uint8_t controlUMax, uint8_t heaterOn,
                              HeaterTestLogStatus status);
 void HeaterTestLog_MarkComplete(void);
 

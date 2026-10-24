@@ -20,16 +20,11 @@
 #define TEMPERATURE_FILTER_ALPHA_NUMERATOR 1
 #define TEMPERATURE_FILTER_ALPHA_DENOMINATOR 4
 #define TEMPERATURE_FILTER_MAX_STEP_TENTHS 50
-#define HEATER_TEST_SAMPLE_MS 10000U
+#define HEATER_TEST_SAMPLE_MS 1000U
+#define HEATER_TEST_CONTROL_MAX 255U
 #define HEATER_TEST_SAFETY_CHECK_MS 300U
 #define HEATER_TEST_WINDOW_MS 10000U
-#define HEATER_TEST_DURATION_MS (35U * MINUTE_MS)
-#define COOLING_TEST_DURATION_MS (60U * MINUTE_MS)
-#define COOLING_PREHEAT_TIMEOUT_MS (35U * MINUTE_MS)
-#define COOLING_PREHEAT_REDUCE_TEMPERATURE_TENTHS 1100
-#define COOLING_START_TEMPERATURE_TENTHS 1210
-#define COOLING_PREHEAT_FULL_POWER_PERCENT 100U
-#define COOLING_PREHEAT_REDUCED_POWER_PERCENT 70U
+#define HEATER_TEST_DURATION_MS (120U * MINUTE_MS)
 
 typedef struct {
   GPIO_TypeDef *port;
@@ -76,20 +71,24 @@ static TM1637Handle display2;
 static ButtonInput powerButtons[TEST_POWER_COUNT];
 static ButtonInput startButton;
 static int16_t temperatureTenthsC;
+static int16_t rawTemperatureTenthsC;
+static uint32_t temperatureSampleTick;
 static uint8_t sensorReady;
 static uint8_t safetyErrorActive;
 static StartupSafetyState startupSafetyState;
 static BuzzerSequence buzzer;
 static uint8_t temperatureFilterReady;
 static int16_t filteredTemperatureTenthsC;
-static uint8_t heaterTestPowerPercent = 100U;
+static uint8_t heaterTestControlU;
+static uint8_t heaterTestSelectedU;
+static uint8_t heaterTestPendingU;
+static uint8_t heaterTestChangePending;
 static uint8_t heaterTestRunning;
 static uint8_t heaterTestHeaterOn;
-static uint8_t coolingPreheatActive;
-static uint8_t coolingPreheatPowerPercent;
 static uint32_t heaterTestStartTick;
 static uint32_t heaterTestLastSampleTick;
 static uint32_t heaterTestLastSafetyCheckTick;
+static uint32_t heaterTestWindowIndex;
 
 static const GpioOutput powerLeds[TEST_POWER_COUNT] = {
   {LD_P1_GPIO_Port, LD_P1_Pin},
@@ -114,20 +113,6 @@ static void MX_SPI3_Init(void);
 static void SafetyOutputs_Stop(void);
 static void Buzzer_Play(BuzzerEvent event);
 static void HeaterTest_DisplayPower(void);
-
-static uint8_t SegmentForCharacter(char character)
-{
-  switch (character) {
-    case '0': return 0x3fU;
-    case '1': return 0x06U;
-    case '2': return 0x5bU;
-    case '3': return 0x4fU;
-    case '4': return 0x66U;
-    case '7': return 0x07U;
-    case 'H': return 0x76U;
-    default: return 0x00U;
-  }
-}
 
 static void DisplayError(uint8_t code)
 {
@@ -188,6 +173,8 @@ static uint8_t Temperature_Read(int16_t *temperature)
   if (temperature == NULL || Max31865_ReadTemperatureTenthsC(&max31865, &raw) == 0U) {
     return 0U;
   }
+  rawTemperatureTenthsC = raw;
+  temperatureSampleTick = HAL_GetTick();
   *temperature = TemperatureFilter_Apply(raw);
   return 1U;
 }
@@ -195,6 +182,7 @@ static uint8_t Temperature_Read(int16_t *temperature)
 static void SafetyOutputs_Stop(void)
 {
   HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin, GPIO_PIN_RESET);
+  heaterTestHeaterOn = 0U;
 }
 
 static void SafetyError_Set(uint8_t code)
@@ -218,7 +206,7 @@ static uint8_t Temperature_Check(void)
     SafetyError_Set(1U);
     return 0U;
   }
-  if (temperatureTenthsC > (int16_t)OVER_TEMPERATURE_TENTHS) {
+  if (rawTemperatureTenthsC >= (int16_t)OVER_TEMPERATURE_TENTHS) {
     SafetyError_Set(5U);
     return 0U;
   }
@@ -305,123 +293,102 @@ static void Buzzer_Process(uint32_t now)
   }
 }
 
+/* Display the editable u, with a decimal point while it differs from applied u. */
 static void HeaterTest_DisplayPower(void)
 {
-  uint8_t segments[4] = {SegmentForCharacter('H'), 0U, 0U, 0U};
-
-  if (heaterTestPowerPercent == 100U) {
-    segments[1] = SegmentForCharacter('1');
-    segments[2] = SegmentForCharacter('0');
-  } else {
-    segments[2] = SegmentForCharacter((char)('0' + heaterTestPowerPercent / 10U));
+  static const uint8_t digits[10] = {
+    0x3fU, 0x06U, 0x5bU, 0x4fU, 0x66U,
+    0x6dU, 0x7dU, 0x07U, 0x7fU, 0x6fU
+  };
+  uint8_t segments[4] = {0x1cU, 0U, 0U, 0U}; /* u000 .. u255 */
+  segments[1] = digits[heaterTestSelectedU / 100U];
+  segments[2] = digits[(heaterTestSelectedU / 10U) % 10U];
+  segments[3] = digits[heaterTestSelectedU % 10U];
+  if (heaterTestRunning != 0U &&
+      (heaterTestSelectedU != heaterTestControlU || heaterTestChangePending != 0U)) {
+    segments[3] |= 0x80U;
   }
-  segments[3] = SegmentForCharacter('0');
   tm1637DisplaySegments(&display1, segments);
 }
 
-static void CoolingTest_DisplayPreheatPower(void)
+static void HeaterTest_LogSample(uint32_t tick, HeaterTestLogStatus status)
 {
-  uint8_t selectedPower = heaterTestPowerPercent;
-
-  heaterTestPowerPercent = coolingPreheatPowerPercent;
-  HeaterTest_DisplayPower();
-  heaterTestPowerPercent = selectedPower;
-}
-
-static void HeaterTest_LogSample(uint32_t now, HeaterTestLogStatus status)
-{
-  if (HeaterTestLog_Append(now - heaterTestStartTick, temperatureTenthsC,
-                           heaterTestPowerPercent, heaterTestHeaterOn, status) == 0U) {
+  if (HeaterTestLog_Append(tick - heaterTestStartTick, rawTemperatureTenthsC,
+                           heaterTestControlU, HEATER_TEST_CONTROL_MAX,
+                           heaterTestHeaterOn, status) == 0U) {
     SafetyOutputs_Stop();
     heaterTestRunning = 0U;
+    heaterTestChangePending = 0U;
+    HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
   }
 }
 
 static void HeaterTest_Stop(HeaterTestLogStatus status, uint32_t now)
 {
+  SafetyOutputs_Stop();
   if (heaterTestRunning != 0U) {
     HeaterTest_LogSample(now, status);
   }
   heaterTestRunning = 0U;
-  heaterTestHeaterOn = 0U;
-  coolingPreheatActive = 0U;
-  SafetyOutputs_Stop();
+  heaterTestChangePending = 0U;
   HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_RESET);
   HeaterTest_DisplayPower();
   HeaterTestLog_MarkComplete();
 }
 
-static void HeaterTest_Start(uint32_t now)
-{
-  SafetyOutputs_Stop();
-  if (Temperature_Check() == 0U) {
-    return;
-  }
-
-  heaterTestStartTick = now;
-  heaterTestLastSampleTick = now - HEATER_TEST_SAMPLE_MS;
-  heaterTestLastSafetyCheckTick = now - HEATER_TEST_SAFETY_CHECK_MS;
-  HeaterTestLog_Reset();
-  heaterTestRunning = 1U;
-  coolingPreheatActive = (heaterTestPowerPercent == 0U) ? 1U : 0U;
-  coolingPreheatPowerPercent = COOLING_PREHEAT_FULL_POWER_PERCENT;
-  HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_SET);
-  if (coolingPreheatActive != 0U) {
-    if (temperatureTenthsC >= (int16_t)COOLING_PREHEAT_REDUCE_TEMPERATURE_TENTHS) {
-      coolingPreheatPowerPercent = COOLING_PREHEAT_REDUCED_POWER_PERCENT;
-    }
-    CoolingTest_DisplayPreheatPower();
-  }
-  Buzzer_Play(BUZZER_EVENT_START);
-}
-
 static void HeaterTest_ApplyPower(uint32_t now)
 {
   uint32_t elapsed = (now - heaterTestStartTick) % HEATER_TEST_WINDOW_MS;
-  uint8_t appliedPower = (coolingPreheatActive != 0U) ?
-                         coolingPreheatPowerPercent : heaterTestPowerPercent;
-  uint32_t onTime;
-
-  if (coolingPreheatActive != 0U &&
-      temperatureTenthsC >= (int16_t)COOLING_START_TEMPERATURE_TENTHS) {
-    appliedPower = 0U;
-  }
-  onTime = HEATER_TEST_WINDOW_MS * appliedPower / 100U;
-
+  uint32_t onTime = HEATER_TEST_WINDOW_MS * heaterTestControlU / HEATER_TEST_CONTROL_MAX;
   heaterTestHeaterOn = (elapsed < onTime) ? 1U : 0U;
   HAL_GPIO_WritePin(SSR_Heater_GPIO_Port, SSR_Heater_Pin,
                     heaterTestHeaterOn ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
-static void CoolingTest_BeginLogging(uint32_t now)
+static void HeaterTest_Start(void)
 {
-  coolingPreheatActive = 0U;
-  heaterTestHeaterOn = 0U;
   SafetyOutputs_Stop();
-  heaterTestStartTick = now;
-  heaterTestLastSampleTick = now - HEATER_TEST_SAMPLE_MS;
+  if (Temperature_Check() == 0U) {
+    return;
+  }
   HeaterTestLog_Reset();
+  heaterTestControlU = heaterTestSelectedU;
+  heaterTestChangePending = 0U;
+  heaterTestWindowIndex = 0U;
+  heaterTestStartTick = HAL_GetTick();
+  heaterTestLastSampleTick = heaterTestStartTick;
+  heaterTestLastSafetyCheckTick = heaterTestStartTick;
+  heaterTestRunning = 1U;
+  HeaterTest_ApplyPower(heaterTestStartTick);
+  HeaterTest_LogSample(heaterTestStartTick, HEATER_LOG_STATUS_RUN);
+  HAL_GPIO_WritePin(LD_Start_GPIO_Port, LD_Start_Pin, GPIO_PIN_SET);
   HeaterTest_DisplayPower();
-  Buzzer_Play(BUZZER_EVENT_READY);
+  Buzzer_Play(BUZZER_EVENT_START);
 }
 
 static void HeaterTest_Process(uint32_t now)
 {
-  static const uint8_t powers[TEST_POWER_COUNT] = {100U, 70U, 40U};
   uint8_t index;
   uint8_t startPressed;
+  uint32_t windowIndex;
 
   for (index = 0U; index < TEST_POWER_COUNT; ++index) {
+    uint8_t pressed;
+    uint8_t repeat;
     ButtonInput_Update(&powerButtons[index], now, BUTTON_DEBOUNCE_MS,
                        BUTTON_LONG_PRESS_MS, BUTTON_REPEAT_MS);
-    if (ButtonInput_ConsumePressed(&powerButtons[index]) != 0U &&
-        heaterTestRunning == 0U && startupSafetyState == STARTUP_SAFETY_READY) {
-      /* There is no fourth power button: P3 alternates between 40% and 0%.
-       * This keeps the existing panel wiring usable for the cooling test. */
-      if (index == 2U && heaterTestPowerPercent == powers[index]) {
-        heaterTestPowerPercent = 0U;
-      } else {
-        heaterTestPowerPercent = powers[index];
+    pressed = ButtonInput_ConsumePressed(&powerButtons[index]);
+    repeat = ButtonInput_ConsumeRepeat(&powerButtons[index]);
+    if ((pressed != 0U || (index < 2U && repeat != 0U)) &&
+        startupSafetyState == STARTUP_SAFETY_READY && safetyErrorActive == 0U) {
+      if (index == 0U && heaterTestSelectedU < HEATER_TEST_CONTROL_MAX) {
+        ++heaterTestSelectedU;
+      } else if (index == 1U && heaterTestSelectedU > 0U) {
+        --heaterTestSelectedU;
+      } else if (index == 2U && heaterTestRunning != 0U) {
+        /* Latch the requested value; P1/P2 cannot alter an already queued step. */
+        heaterTestPendingU = heaterTestSelectedU;
+        heaterTestChangePending = (heaterTestPendingU != heaterTestControlU);
       }
       PowerLed_Select(index);
       HeaterTest_DisplayPower();
@@ -435,52 +402,61 @@ static void HeaterTest_Process(uint32_t now)
   if (startPressed != 0U && safetyErrorActive != 0U) {
     SafetyError_Clear();
     StartupSafety_RequestRecheck();
-    Buzzer_Play(BUZZER_EVENT_BUTTON);
   } else if (startPressed != 0U && startupSafetyState == STARTUP_SAFETY_READY) {
     if (heaterTestRunning != 0U) {
-      HeaterTest_Stop(HEATER_LOG_STATUS_STOP, now);
+      HeaterTest_Stop(HEATER_LOG_STATUS_STOP, HAL_GetTick());
       Buzzer_Play(BUZZER_EVENT_STOP);
     } else {
-      HeaterTest_Start(now);
+      HeaterTest_Start();
     }
   }
 
   if (heaterTestRunning == 0U) {
     return;
   }
-  if ((now - heaterTestStartTick) >= ((coolingPreheatActive != 0U) ?
-                                      COOLING_PREHEAT_TIMEOUT_MS :
-                                      ((heaterTestPowerPercent == 0U) ?
-                                       COOLING_TEST_DURATION_MS : HEATER_TEST_DURATION_MS))) {
+  now = HAL_GetTick();
+  if ((now - heaterTestStartTick) >= HEATER_TEST_DURATION_MS) {
     HeaterTest_Stop(HEATER_LOG_STATUS_DONE, now);
     Buzzer_Play(BUZZER_EVENT_COMPLETE);
     return;
   }
+  /* Reserve a record for the stop reason; never heat after filling RAM. */
+  if (gHeaterTestLog.sampleCount >= HEATER_TEST_LOG_CAPACITY - 2U) {
+    HeaterTest_Stop(HEATER_LOG_STATUS_BUFFER_FULL, now);
+    return;
+  }
 
+  windowIndex = (now - heaterTestStartTick) / HEATER_TEST_WINDOW_MS;
+  if (windowIndex != heaterTestWindowIndex) {
+    heaterTestWindowIndex = windowIndex;
+    if (heaterTestChangePending != 0U) {
+      heaterTestControlU = heaterTestPendingU;
+      heaterTestChangePending = 0U;
+      /* Timestamp the actual command application, not the button press. The
+       * event carries the latest real reading (up to 300 ms old). */
+      HeaterTest_ApplyPower(now);
+      HeaterTest_LogSample(now, HEATER_LOG_STATUS_POWER_CHANGE);
+      HeaterTest_DisplayPower();
+    }
+  }
   HeaterTest_ApplyPower(now);
   if ((now - heaterTestLastSafetyCheckTick) < HEATER_TEST_SAFETY_CHECK_MS) {
     return;
   }
   heaterTestLastSafetyCheckTick = now;
   if (Temperature_Check() == 0U) {
-    HeaterTest_Stop((temperatureTenthsC > (int16_t)OVER_TEMPERATURE_TENTHS) ?
-                    HEATER_LOG_STATUS_OVER_TEMP : HEATER_LOG_STATUS_SENSOR_ERROR, now);
+    HeaterTest_Stop((rawTemperatureTenthsC >= (int16_t)OVER_TEMPERATURE_TENTHS) ?
+                    HEATER_LOG_STATUS_OVER_TEMP : HEATER_LOG_STATUS_SENSOR_ERROR,
+                    HAL_GetTick());
     return;
   }
-  if (coolingPreheatActive != 0U) {
-    if (temperatureTenthsC >= (int16_t)COOLING_START_TEMPERATURE_TENTHS) {
-      CoolingTest_BeginLogging(now);
-    } else if (temperatureTenthsC >=
-               (int16_t)COOLING_PREHEAT_REDUCE_TEMPERATURE_TENTHS &&
-               coolingPreheatPowerPercent != COOLING_PREHEAT_REDUCED_POWER_PERCENT) {
-      coolingPreheatPowerPercent = COOLING_PREHEAT_REDUCED_POWER_PERCENT;
-      CoolingTest_DisplayPreheatPower();
-    }
-    return;
-  }
-  if ((now - heaterTestLastSampleTick) >= HEATER_TEST_SAMPLE_MS) {
-    heaterTestLastSampleTick = now;
-    HeaterTest_LogSample(now, HEATER_LOG_STATUS_RUN);
+  /* Sensor transfers/display updates take time. Use fresh ticks for SSR and
+   * the actual acquisition timestamp; do not invent backfilled samples. */
+  HeaterTest_ApplyPower(HAL_GetTick());
+  if ((temperatureSampleTick - heaterTestLastSampleTick) >= HEATER_TEST_SAMPLE_MS) {
+    heaterTestLastSampleTick += ((temperatureSampleTick - heaterTestLastSampleTick) /
+                                HEATER_TEST_SAMPLE_MS) * HEATER_TEST_SAMPLE_MS;
+    HeaterTest_LogSample(temperatureSampleTick, HEATER_LOG_STATUS_RUN);
   }
 }
 
@@ -505,6 +481,10 @@ int main(void)
   Max31865_Init(&max31865, &hspi3, CS_GPIO_Port, CS_Pin, 430.0f, 100.0f);
   temperatureFilterReady = 0U;
   sensorReady = Max31865_Begin(&max31865, MAX31865_2WIRE, 1U);
+  /* Continuous conversion avoids the 100 ms one-shot delay in every loop. */
+  Max31865_EnableBias(&max31865, 1U);
+  Max31865_AutoConvert(&max31865, 1U);
+  HAL_Delay(100U);
   startupSafetyState = STARTUP_SAFETY_CHECK_PT100;
   StartupSafety_Process();
   HeaterTest_DisplayPower();

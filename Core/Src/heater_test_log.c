@@ -22,7 +22,7 @@ void HeaterTestLog_Reset(void)
 }
 
 uint8_t HeaterTestLog_Append(uint32_t elapsedMs, int16_t temperatureTenthsC,
-                             uint8_t powerPercent, uint8_t heaterOn,
+                             uint8_t controlU, uint8_t controlUMax, uint8_t heaterOn,
                              HeaterTestLogStatus status)
 {
   uint32_t index = gHeaterTestLog.sampleCount;
@@ -36,7 +36,9 @@ uint8_t HeaterTestLog_Append(uint32_t elapsedMs, int16_t temperatureTenthsC,
   sample = &gHeaterTestLog.samples[index];
   sample->elapsedMs = elapsedMs;
   sample->temperatureTenthsC = temperatureTenthsC;
-  sample->powerPercent = powerPercent;
+  sample->powerPercent = (uint8_t)((100U * controlU + controlUMax / 2U) / controlUMax);
+  sample->controlU = controlU;
+  sample->controlUMax = controlUMax;
   sample->heaterOn = heaterOn;
   sample->status = (uint8_t)status;
   /* Publish the record only after all its fields have been written. */

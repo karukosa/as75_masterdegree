@@ -8,45 +8,34 @@ from pathlib import Path
 
 from analyze_heater_step import read_samples
 from analyze_thermal_model import fit_cooling
+from thermal_chart import time_label, write_thermal_svg
 
 
 def write_svg(path: Path, samples, model) -> None:
-    width, height, margin = 1000, 560, 70
     start = samples[0][0]
-    times = [sample[0] for sample in samples]
-    measured_temperatures = [sample[2] for sample in samples]
-    modeled_temperatures = [
-        model["ambient_temperature_c"]
-        + (model["cooling_initial_temperature_c"] - model["ambient_temperature_c"])
-        * math.exp(-(time - start) / model["time_constant_s"])
-        for time in times
+    ambient = model["ambient_temperature_c"]
+    initial = model["cooling_initial_temperature_c"]
+    tau = model["time_constant_s"]
+    modeled = [(t, ambient + (initial - ambient) * math.exp(-(t - start) / tau))
+               for t, _, _ in samples]
+    parameters = [
+        ("Công suất", "0% · nguội tự nhiên"),
+        ("Nhiệt độ đầu mô hình", f"{initial:.2f} °C"),
+        ("Nhiệt độ môi trường (ước tính)", f"{ambient:.2f} °C"),
+        ("τ — hằng số thời gian nguội", time_label(tau)),
+        ("Thời điểm t đầu + τ", time_label(start + tau) +
+         (" · ngoài đoạn đo" if start + tau > samples[-1][0] else "")),
+        ("Sai số mô hình", f"RMSE {model['cooling_rmse_c']:.3f} °C · R² {model['cooling_r_squared']:.4f}"),
     ]
-    xmin, xmax = min(times), max(times)
-    ymin = min(measured_temperatures + modeled_temperatures)
-    ymax = max(measured_temperatures + modeled_temperatures)
-
-    def point(time: float, temperature: float) -> str:
-        x = margin + (time - xmin) * (width - 2 * margin) / (xmax - xmin)
-        y = height - margin - (temperature - ymin) * (height - 2 * margin) / (ymax - ymin)
-        return f"{x:.1f},{y:.1f}"
-
-    measured = " ".join(point(time, temperature) for time, _, temperature in samples)
-    modeled = " ".join(point(time, temperature) for time, temperature in zip(times, modeled_temperatures))
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-<rect width="100%" height="100%" fill="white"/>
-<text x="{width / 2}" y="30" text-anchor="middle" font-family="sans-serif" font-size="20">Natural cooling response (0%)</text>
-<line x1="{margin}" y1="{height-margin}" x2="{width-margin}" y2="{height-margin}" stroke="black"/>
-<line x1="{margin}" y1="{margin}" x2="{margin}" y2="{height-margin}" stroke="black"/>
-<polyline points="{measured}" fill="none" stroke="#1976d2" stroke-width="2"/>
-<polyline points="{modeled}" fill="none" stroke="#d32f2f" stroke-width="2" stroke-dasharray="8 5"/>
-<text x="{width/2}" y="{height-15}" text-anchor="middle" font-family="sans-serif">Time (s)</text>
-<text x="18" y="{height/2}" transform="rotate(-90 18 {height/2})" text-anchor="middle" font-family="sans-serif">Temperature (°C)</text>
-<text x="{margin+15}" y="{margin+20}" font-family="sans-serif" fill="#1976d2">measured</text>
-<text x="{margin+120}" y="{margin+20}" font-family="sans-serif" fill="#d32f2f">cooling model</text>
-</svg>
-"""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(svg, encoding="utf-8")
+    write_thermal_svg(
+        path, samples, title="Đường nhiệt độ nguội tự nhiên",
+        subtitle="Natural cooling response (0%) · nhiệt độ thực đo theo thời gian",
+        control_max=getattr(samples, "control_max", 255), modeled=modeled,
+        references=[("Nhiệt độ môi trường ước tính", ambient)],
+        markers=[("Sau một τ", start + tau, ambient + (initial - ambient) / math.e, "#8e5ca6")],
+        parameters=parameters, status="MÔ HÌNH NGUỘI ƯỚC TÍNH",
+        warnings=["Thông số môi trường và τ được khớp từ đường nguội; không phải nhiệt độ đo trực tiếp."],
+    )
 
 
 def main() -> int:
