@@ -202,6 +202,18 @@ thư mục tạm có sẵn, sau đó dùng Python sao chép file sang đường 
 `--keep-dump`. Python tạo sẵn file rỗng này để tương thích với các bản
 xPack GDB trên Windows không tự tạo được file đích của lệnh `dump binary`.
 
+Log phiên bản 2 có kích thước **86.472 byte**, lớn hơn giới hạn giá trị 64 KiB
+thường gặp của GDB. Script đặt `set max-value-size unlimited` trước khi đọc log
+và dùng `dump binary memory` để lấy trực tiếp vùng nhớ. Nếu gặp lỗi
+`requires 86472 bytes, which is more than max-value-size`, cập nhật
+`tools/capture_ram_log.py` trên máy tính rồi chạy lại `.bat`; không cần đổi hoặc
+nạp lại firmware chỉ để sửa lỗi GDB này.
+
+Nếu lần lấy dữ liệu trước bị lỗi nhưng bo vẫn có nguồn và log đã hoàn tất,
+script sẽ tự lấy lại log ngay khi kết nối. **Không reset bo hoặc nhấn START
+chạy lần mới**, vì sẽ xóa dữ liệu trong RAM. Nếu phép đo chưa hoàn tất, script
+tiếp tục chờ như bình thường.
+
 STM32 không thể tự gửi dữ liệu chỉ qua dây SWD nếu trên máy tính không có một
 GDB server và chương trình đang chờ nhận; vì vậy chỉ cần khởi chạy script một
 lần trước thí nghiệm, sau đó chỉnh u, áp dụng bước bằng P3 và chạy/dừng bằng START.
@@ -214,17 +226,17 @@ biến toàn cục (thay `build/firmware.elf` bằng file ELF thực tế):
 
 ```gdb
 arm-none-eabi-gdb build/firmware.elf
+(gdb) set max-value-size unlimited
 (gdb) target extended-remote :3333
 (gdb) monitor halt
-(gdb) dump binary value heater_ram.bin gHeaterTestLog
+(gdb) dump binary memory heater_ram.bin &gHeaterTestLog ((char *)&gHeaterTestLog + sizeof(gHeaterTestLog))
 (gdb) detach
 ```
 
 Lưu ý: không dùng `monitor reset halt`, vì startup sẽ xóa RAM log nếu chạy
 trước khi CPU được halt. Có thể dùng nút Pause của debugger thay cho
-`monitor halt`. Nếu debugger không hỗ trợ `dump binary value`,
-có thể dùng địa chỉ/kích thước mà GDB trả về từ `p &gHeaterTestLog` và
-`p sizeof(gHeaterTestLog)` với lệnh `dump binary memory`.
+`monitor halt`. Lệnh `dump binary memory` lấy địa chỉ và kích thước từ symbol
+trong ELF; cần dùng đúng file ELF khớp với firmware đã nạp trên bo.
 
 Chuyển file nhị phân thành CSV:
 

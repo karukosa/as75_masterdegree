@@ -36,21 +36,35 @@ def _gdb_quote(path: Path) -> str:
 
 
 def build_gdb_commands(elf: Path, dump: Path, target: str) -> str:
-    """Build a batch GDB program which waits for complete to change to one."""
+    """Dump a completed log, or wait for complete to change to one."""
     dump_text = str(dump)
     if any(character.isspace() for character in dump_text) or '"' in dump_text:
         raise ValueError("tên file dump nội bộ của GDB không được chứa khoảng trắng hoặc dấu nháy")
+    # The 86,472-byte v2 log exceeds GDB's usual 64 KiB value limit. Increase
+    # it before evaluating any field (watchpoints may evaluate the parent
+    # struct), and dump memory directly rather than materializing a value.
+    dump_command = (
+        f"dump binary memory {dump_text} &gHeaterTestLog "
+        "((char *)&gHeaterTestLog + sizeof(gHeaterTestLog))"
+    )
     return f"""set pagination off
 set confirm off
 set remotetimeout 5
+set max-value-size unlimited
 file {_gdb_quote(elf)}
 target extended-remote {target}
 monitor halt
+if gHeaterTestLog.complete == 1
+  {dump_command}
+  printf "\\nDa lay lai log RAM da hoan tat. Khong can nhan START.\\n"
+  detach
+  quit
+end
 watch -l gHeaterTestLog.complete
 commands
   silent
   if gHeaterTestLog.complete == 1
-    dump binary value {dump_text} gHeaterTestLog
+    {dump_command}
     printf "\\nDa nhan du log RAM.\\n"
     detach
     quit
