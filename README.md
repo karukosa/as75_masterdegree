@@ -1,9 +1,13 @@
-# AS75 – lấy mẫu manual để nhận dạng hàm truyền lò
+# AS75 – lấy mẫu manual và so sánh các lần gia nhiệt
 
-Firmware thực hiện thí nghiệm hở vòng **giữ u1 → tăng lên u2**, ghi nhiệt độ
-PT100 thực để nhận dạng gần đúng khâu quán tính bậc nhất có trễ quanh vùng làm
-việc. Thang u là **0–255**. Firmware này không chạy PID hoặc tự giữ nhiệt độ;
-người vận hành chọn u sao cho lò tự đạt cân bằng nhiệt.
+Firmware thực hiện thí nghiệm hở vòng, ghi nhiệt độ PT100 thực theo thời gian.
+Có thể **giữ một u cố định trong cả lần đo** để kiểm tra độ lặp lại, hoặc thực
+hiện bước u1 → u2 để dùng công cụ nhận dạng riêng. Thang u là **0–255**.
+Firmware này không chạy PID hoặc tự giữ nhiệt độ; người vận hành chọn u.
+
+Cách đo hiện tại: chạy khoảng **5 lần tại u=77 (30,20%)**, cùng điều kiện ban
+đầu và tải, rồi so sánh các đường nhiệt độ. Không cần đổi sang u2. Chỉ cập nhật
+công cụ trên máy tính cho cách phân tích này, **không cần nạp lại firmware**.
 
 ## Bảng chân để tạo project mới
 
@@ -59,7 +63,30 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
 4. Không cần chép thư mục `tools/` vào firmware. Thư mục này chỉ chạy trên máy
    tính để lấy và phân tích log.
 
-## Chuẩn bị và tìm u1/u2
+## Đo lặp lại tại một u cố định (cách hiện tại)
+
+1. Giữ cùng lượng nước/tải, trạng thái cửa nồi, vị trí PT100, cách gia nhiệt
+   trước và nhiệt độ bắt đầu giữa các lần đo. Cùng số đo PT100 ban đầu chưa
+   bảo đảm thành nồi có cùng trạng thái tích nhiệt.
+2. Lưu xong lần trước trước khi reset hoặc START lại. Nếu log cũ đã hoàn tất
+   còn trong RAM, script capture sẽ lấy lại log đó ngay khi kết nối. Để chuẩn
+   bị lần mới sau khi đã lưu log cũ, reset MCU, chọn u077 bằng P1/P2, mở script
+   capture rồi nhấn START. Giữ u077 suốt lần đo; không nhấn P3 đổi u.
+3. Chọn cùng thời gian ghi trong phạm vi cho phép của thí nghiệm. Nhấn START
+   để dừng/lưu; firmware cũng tự hoàn tất khi hết 120 phút. Các bảo vệ sẵn có
+   vẫn hoạt động. Không coi DONE là xác nhận nhiệt độ ổn định.
+4. Lặp khoảng 5 lần, lưu riêng CSV, RAM và biểu đồ. `Lay_du_lieu_40.bat`
+   **giữ tên cũ nhưng mặc định phân tích một u cố định** (`ANALYSIS_MODE=fixed`).
+   Chỉnh `PROJECT_DIR`, `GDB` trong file cho đúng máy. Mỗi lần mở `.bat`,
+   kết quả lưu vào `%PROJECT_DIR%\data\run_<ngày giờ>\` gồm:
+   `manual_step.csv`, `manual_ram.bin`, `manual_step.svg`,
+   `manual_step_summary.json`, `manual_step_summary.csv`.
+   Những file cũ trực tiếp trong `data` không bị ghi đè.
+5. Dùng công cụ bên dưới để so sánh các CSV đã chọn. Chỉ đưa vào cùng nhóm
+   các lần chạy cùng u, tránh trộn các mức 60–80 hoặc các lần khác cách chuẩn
+   bị. CSV có bước đổi u bị từ chối ở chế độ phân tích này.
+
+## Chuẩn bị và tìm u1/u2 (khi cần phép đo bước)
 
 1. Chọn vùng nhiệt độ làm việc và giới hạn nhiệt độ cho phép của thí nghiệm.
    Giữ nguyên lượng nước/tải, cửa và điều kiện môi trường giữa hai pha.
@@ -77,7 +104,7 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
 5. Kết thúc lần dò, lưu nếu cần, rồi bắt đầu lần đo chính thức ở u1. Lần đo
    chính thức chỉ có **một bước u1 → u2** để phân tích tự động rõ ràng.
 
-## Thao tác nút và lấy mẫu chính thức
+## Thao tác nút và lấy mẫu
 
 | Nút | Khi dừng | Khi đang chạy |
 |---|---|---|
@@ -91,6 +118,9 @@ Giữ P1/P2 sẽ lặp sau 1 giây, mỗi 0,5 giây một đơn vị. Màn hình
 áp dụng hoặc có lệnh đang chờ. P3 chốt giá trị tại thời điểm bấm; chỉnh P1/P2
 sau đó không thay lệnh đã chốt, trừ khi bấm P3 lại. LED P1/P2/P3 chỉ nút vừa
 thao tác; LED START cho biết đang chạy.
+
+Quy trình dưới đây dành riêng cho phép đo bước u1 → u2. Đo lặp lại một u dùng
+quy trình phía trên, không cần P3:
 
 1. Chạy script lấy log trên máy tính trước (xem dưới). Đặt u1 bằng P1/P2,
    nhấn START để bắt đầu ghi cả quá trình tiến đến T1.
@@ -120,10 +150,10 @@ có trong driver, không phải giá trị ADC thô). Màn hình dùng nhiệt �
 bảo vệ quá nhiệt dùng nhiệt độ chưa qua lọc để tránh trễ do lọc phần mềm.
 
 Không tự kết thúc sau 35 phút. Log có 7204 bản ghi, chiếm **86.472 byte RAM**,
-giới hạn tối đa **120 phút cho cả hai pha**; nhiều sự kiện đổi u có thể làm đầy
+giới hạn tối đa **120 phút cho cả lần đo**; nhiều sự kiện đổi u có thể làm đầy
 sớm hơn. Khi đầy, timeout, dừng tay hoặc lỗi, firmware tắt SSR rồi hoàn tất log.
-`DONE`/timeout **không có nghĩa** nhiệt độ đã xác lập. Nếu chưa đạt T2 thì cần
-điều chỉnh phép đo; không kết luận hàm truyền từ việc hết giờ. STM32F407VG có
+`DONE`/timeout **không có nghĩa** nhiệt độ đã xác lập. Không kết luận xác lập
+hay hàm truyền từ việc hết giờ. STM32F407VG có
 128 KiB SRAM thông thường, nhưng phải kiểm tra báo cáo RAM của project CubeIDE
 thực tế khi thêm log vào chương trình khác.
 
@@ -280,7 +310,60 @@ Khi chép mã vào project CubeIDE hiện có:
 3. Chọn **Project > Clean...**, sau đó **Refresh** và build lại. Việc clean sẽ tạo
    lại `subdir.mk`, tránh make tiếp tục biên dịch đường dẫn của file đã xóa hoặc di chuyển.
 
-## Đồ thị thực nghiệm và hàm truyền
+## Đồ thị một u cố định và so sánh độ lặp lại
+
+Chạy ở thư mục gốc repo. Trên Windows dùng `py`; trên Linux dùng `python3`.
+Công cụ chỉ cần thư viện chuẩn Python, không cần cài matplotlib.
+
+Vẽ và thống kê một lần (nhiệt độ đầu/cuối RUN, min/max, thời gian, u, trung
+bình, max−min và độ dốc hồi quy cửa sổ cuối):
+
+```bat
+py tools\analyze_repeatability.py data\u77_lan1.csv
+```
+
+Đầu ra mặc định cùng thư mục CSV: `u77_lan1.svg`, `u77_lan1_summary.json`,
+`u77_lan1_summary.csv`. Không cần bước đổi u, không tự khớp hàm truyền hoặc
+tính PID. Nhiệt độ chưa ổn định vẫn là kết quả đo hợp lệ, không báo lỗi chỉ
+vì không đạt tiêu chí cuối. Log lỗi cảm biến/đầy RAM/chưa hoàn tất được ghi
+cảnh báo riêng, không xác nhận cửa sổ cuối hợp lệ.
+
+Chồng 5 đường từ các file đã đặt tên `u77_lan1.csv`…`u77_lan5.csv`:
+
+```bat
+py tools\analyze_repeatability.py "data\u77_lan*.csv" --svg data\u77_so_sanh.svg --json data\u77_so_sanh.json --summary-csv data\u77_so_sanh.csv
+```
+
+Hoặc dùng đường dẫn tuyệt đối nơi `.bat` lưu dữ liệu, chọn các thư mục cùng
+u77; ví dụ nếu tất cả `run_*` dưới đây đều là u77:
+
+```bat
+py tools\analyze_repeatability.py "C:\Users\Admin\Documents\Works\STM\Test_CIC\AS75_MD\data\run_*\manual_step.csv" --svg data\u77_so_sanh.svg --json data\u77_so_sanh.json --summary-csv data\u77_so_sanh.csv
+```
+
+Cũng có thể liệt kê riêng từng đường dẫn CSV, phân cách bằng khoảng trắng.
+Tool hỗ trợ mẫu tên file trong dấu ngoặc kép ngay trên Windows CMD. Không
+chọn cùng một CSV hai lần; các mức u khác nhau phải phân tích thành nhóm riêng.
+
+Biểu đồ chồng giữ nguyên nhiệt độ tuyệt đối và thời gian từ đầu log, có màu
+và tooltip riêng cho mỗi lần; không dịch đường để làm trùng nhiệt độ đầu.
+Bảng cuối từng lần ghi cả thời gian kết thúc vì các cửa sổ cuối có thể ở
+những thời điểm khác nhau. Chỉ số giữa các lần chỉ dùng **khoảng thời gian
+chung**: nội suy tuyến tính mỗi 10 s, không ngoại suy sau khi một lần đã dừng,
+bỏ mốc nằm trong khoảng trống lấy mẫu dài. JSON có RMSE từng cặp, trung bình/
+max chênh nhiệt giữa các lần và trung bình độ lệch chuẩn mẫu giữa các lần.
+Không tự gắn nhãn độ lặp lại đạt/không đạt khi chưa có ngưỡng thống nhất.
+
+Tiêu chí cửa sổ cuối mặc định: 300 s, max−min ≤1 °C, |độ dốc| ≤0,05 °C/phút.
+Có thể đổi bằng `--steady-window-s`, `--steady-band-c`,
+`--steady-slope-c-per-min` theo yêu cầu GV. Đạt một cửa sổ chưa chứng minh cân
+bằng lâu dài; nhiều đường lặp lại tốt vẫn có thể cùng đang tăng nhiệt.
+
+## Đồ thị và hàm truyền từ phép đo bước (công cụ riêng)
+
+Nếu dùng lại phép đo bước, đổi `ANALYSIS_MODE=step` trong `.bat`, hoặc gọi
+trực tiếp công cụ dưới đây. Công cụ này vẫn yêu cầu đúng một bước u1 → u2;
+không dùng nó để đánh giá 5 lần giữ nguyên u77.
 
 ```bash
 python3 tools/analyze_heater_step.py manual_step.csv \
@@ -302,7 +385,7 @@ nếu mốc nằm ngoài thời gian đo, biểu đồ ghi rõ và không vẽ t
 Mở SVG bằng Chrome/Edge/Firefox rồi rê chuột lên đường đo để xem chính xác
 `t`, nhiệt độ và u ở từng mẫu. Ảnh PNG chỉ là bản xem tĩnh. Các tool dùng chung
 `tools/thermal_chart.py`; khi chép tool sang máy khác phải chép kèm file này
-(hoặc chép cả thư mục `tools`). Cách chạy `.bat` không đổi.
+(hoặc chép cả thư mục `tools`). `.bat` hiện mặc định dùng phân tích một u cố định.
 
 Thư mục `data/charts/` chứa các biểu đồ mới dựng lại từ năm log cũ, gồm cả
 đường nguội 0%; dữ liệu CSV, dump RAM và các JSON cũ giữ nguyên. Các thông số
