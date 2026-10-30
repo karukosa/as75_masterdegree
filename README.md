@@ -328,6 +328,17 @@ tính PID. Nhiệt độ chưa ổn định vẫn là kết quả đo hợp lệ
 vì không đạt tiêu chí cuối. Log lỗi cảm biến/đầy RAM/chưa hoàn tất được ghi
 cảnh báo riêng, không xác nhận cửa sổ cuối hợp lệ.
 
+Đồ thị một lần và biểu đồ chồng mặc định dùng **thang nhiệt 0–140 °C** để
+trình bày tổng quan, tránh tự phóng to khoảng nhiệt nhỏ làm đường nhìn quá
+dốc. Không lọc hay thay đổi số đo, thời gian hoặc độ dốc tính toán. Thang tự
+mở rộng nếu có số đo nằm ngoài để không che dữ liệu. Dùng cùng thang khi so
+sánh các lần; JSON ghi khoảng trục thực tế trong `chart_temperature_range_c`.
+Có thể đổi bằng `--temperature-range-c 0 150`, hoặc xem bản phóng to như trước:
+
+```bat
+py tools\analyze_repeatability.py data\u77_lan1.csv --auto-temperature-range --svg data\u77_lan1_zoom.svg --json data\u77_lan1_zoom.json --summary-csv data\u77_lan1_zoom_summary.csv
+```
+
 Chồng 5 đường từ các file đã đặt tên `u77_lan1.csv`…`u77_lan5.csv`:
 
 ```bat
