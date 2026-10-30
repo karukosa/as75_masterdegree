@@ -16,7 +16,7 @@ import sys
 import textwrap
 
 from analyze_heater_step import linear_slope, read_samples
-from thermal_chart import _ticks, clock_label, write_thermal_svg
+from thermal_chart import _ticks, clock_label, temperature_bounds, write_thermal_svg
 
 
 def describe(path, window_s=300.0, band_c=1.0, slope_limit=.05):
@@ -118,7 +118,7 @@ def compare(trials):
                 assessment='Chỉ mô tả độ khác nhau; chưa tự kết luận độ lặp lại đạt/không đạt.')
 
 
-def write_comparison_svg(path, trials, comparison, warnings):
+def write_comparison_svg(path, trials, comparison, warnings, temperature_limits=(0, 140)):
     colors = ('#1765bb', '#b54b32', '#21835c', '#8b57ae', '#a47b13', '#197b8b')
     width = 1360
     legend_rows = math.ceil(len(trials)/2)
@@ -130,11 +130,10 @@ def write_comparison_svg(path, trials, comparison, warnings):
     height = notes_y + 95 + 20*len(note_lines)
     xmax = max(s[-1][0] for s, _ in trials)
     temps = [p[2] for s, _ in trials for p in s]
-    pad = max(.5, (max(temps)-min(temps))*.1)
-    low, high = min(temps)-pad, max(temps)+pad
+    low, high = temperature_bounds(temps, temperature_limits)
     x = lambda t: 90 + 1180*t/max(1, xmax)
     y = lambda v: bottom - (v-low)/(high-low)*(bottom-top)
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" data-temperature-min-c="{low:g}" data-temperature-max-c="{high:g}">',
              '<title>So sánh các lần đo giữ u cố định</title>',
              '<desc>Các đường là nhiệt độ đo thực, cùng mốc thời gian từ đầu log. Không khớp hàm truyền.</desc>',
              '<style>text{font-family:Arial,"DejaVu Sans",sans-serif;fill:#243447}.point{fill-opacity:0;pointer-events:all}.point:hover{fill-opacity:1;stroke:white;stroke-width:2}</style>',
@@ -147,12 +146,13 @@ def write_comparison_svg(path, trials, comparison, warnings):
     text(60, 68, 'Nhiệt độ đo thực · cùng thời gian từ đầu log · không dịch nhiệt độ ban đầu để làm trùng đường')
     text(60, 95, f"Khoảng chung: {clock_label(comparison['common_start_s'])}–{clock_label(comparison['common_end_s'])}; "
          f"chênh giữa các lần: TB {comparison['mean_between_run_range_c']:.2f} °C, lớn nhất {comparison['max_between_run_range_c']:.2f} °C")
+    text(1270, top-25, f'Thang nhiệt: {low:g}–{high:g} °C', 12, 'text-anchor="end"')
     for i, (_, r) in enumerate(trials):
         color = colors[i % len(colors)]; lx = 65 + (i % 2)*635; ly = 125 + (i//2)*24
         parts.append(f'<line x1="{lx}" y1="{ly-4}" x2="{lx+25}" y2="{ly-4}" stroke="{color}" stroke-width="3"/>')
         label = f"{i+1}. {Path(r['file']).parent.name}/{Path(r['file']).name}"
         text(lx+32, ly, label if len(label)<=72 else label[:69]+'…', 12)
-    for value in _ticks(low, high):
+    for value in _ticks(low, high, count=7):
         parts.append(f'<line x1="90" y1="{y(value):.1f}" x2="1270" y2="{y(value):.1f}" stroke="#e0e7ef"/>')
         text(55, y(value)+4, f'{value:g}', 12)
     for i in range(7):
@@ -201,7 +201,16 @@ def main(argv=None):
     parser.add_argument('--steady-window-s', type=float, default=300)
     parser.add_argument('--steady-band-c', type=float, default=1)
     parser.add_argument('--steady-slope-c-per-min', type=float, default=.05)
+    scale = parser.add_mutually_exclusive_group()
+    scale.add_argument('--temperature-range-c', type=float, nargs=2, metavar=('MIN', 'MAX'),
+                       default=(0, 140), help='thang nhiệt tổng quan (mặc định 0 140); tự mở rộng nếu số đo nằm ngoài')
+    scale.add_argument('--auto-temperature-range', action='store_true',
+                       help='phóng trục nhiệt theo min/max số đo thay vì thang tổng quan')
     args = parser.parse_args(argv)
+    temperature_limits = None if args.auto_temperature_range else args.temperature_range_c
+    if temperature_limits is not None and (not all(math.isfinite(v) for v in temperature_limits)
+                                           or temperature_limits[0] >= temperature_limits[1]):
+        parser.error('Thang nhiệt độ phải hữu hạn và min nhỏ hơn max')
     limits = (args.steady_window_s, args.steady_band_c, args.steady_slope_c_per_min)
     if any(not math.isfinite(v) or v <= 0 for v in limits):
         parser.error('Ngưỡng cửa sổ, dải nhiệt và độ dốc phải hữu hạn và lớn hơn 0')
@@ -232,6 +241,7 @@ def main(argv=None):
     if len({p.resolve() for p in outputs}) != 3 or any(p.resolve() in {q.resolve() for q in paths} for p in outputs):
         parser.error('Các file kết quả phải khác nhau và không được ghi đè CSV đầu vào')
     result = dict(analysis='fixed_u_repeatability', run_count=len(trials),
+                  chart_temperature_range_c=temperature_bounds([p[2] for s, _ in trials for p in s], temperature_limits),
                   thresholds=dict(window_s=limits[0], range_c=limits[1], abs_slope_c_per_min=limits[2]),
                   runs=[r for _, r in trials], comparison=comparison, warnings=warnings,
                   notes=['Chỉ đánh giá số đo; không khớp hàm truyền hoặc tính PID.',
@@ -240,7 +250,7 @@ def main(argv=None):
         samples, r = trials[0]
         write_thermal_svg(svg_path, samples, title='Thí nghiệm giữ u cố định',
             subtitle='Nhiệt độ đo thực theo thời gian · đánh giá cửa sổ cuối · không khớp hàm truyền',
-            control_max=r['control_u_max'], parameters=[
+            control_max=r['control_u_max'], temperature_limits=temperature_limits, parameters=[
                 ('Công suất giữ nguyên', f"u={r['control_u']}/{r['control_u_max']} ({r['power_percent']:.2f}%)"),
                 ('Trạng thái kết thúc', str(r['final_status'])),
                 ('Cửa sổ cuối', f"{limits[0]:g} s; thực có {samples[-1][0]-r['tail_start_s']:.1f} s"),
@@ -251,7 +261,7 @@ def main(argv=None):
             ], status=tail_label(r).upper(),
             status_ok=r['tail_criteria_met'] and r['tail_assessment_valid'], warnings=warnings)
     else:
-        write_comparison_svg(svg_path, trials, comparison, warnings)
+        write_comparison_svg(svg_path, trials, comparison, warnings, temperature_limits)
     for p in (json_path, csv_path):
         p.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')

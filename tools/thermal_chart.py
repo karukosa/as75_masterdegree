@@ -25,10 +25,26 @@ def _ticks(low: float, high: float, count: int = 5):
     return [first + i * step for i in range(int((high - first) / step) + 1)]
 
 
+def temperature_bounds(values, limits=None):
+    """Use an overview range when requested, expanding to keep every value visible."""
+    low, high = min(values), max(values)
+    if limits is None:
+        pad = max(0.5, (high-low)*0.12)
+        return low-pad, high+pad
+    minimum, maximum = limits
+    if not all(math.isfinite(v) for v in limits) or minimum >= maximum:
+        raise ValueError('Thang nhiệt độ phải hữu hạn và min nhỏ hơn max')
+    if low < minimum:
+        minimum = math.floor(low/10)*10
+    if high > maximum:
+        maximum = math.ceil(high/10)*10
+    return minimum, maximum
+
+
 def write_thermal_svg(path: Path, samples, *, title: str, subtitle: str,
                       control_max: int = 255, modeled=(), references=(),
                       markers=(), parameters=(), status='', status_ok=False,
-                      warnings=()) -> None:
+                      warnings=(), temperature_limits=None) -> None:
     """Render raw measurements separately from model estimates and metadata.
 
     modeled: (time_s, temperature_c); references: (label, temperature_c);
@@ -47,8 +63,7 @@ def write_thermal_svg(path: Path, samples, *, title: str, subtitle: str,
     xmax = max(max(p[0] for p in samples), xmin + 1)
     temperatures = [p[2] for p in samples]
     extent = temperatures + [p[1] for p in modeled if xmin <= p[0] <= xmax]
-    pad = max(0.5, (max(extent) - min(extent)) * 0.12)
-    ymin, ymax = min(extent) - pad, max(extent) + pad
+    ymin, ymax = temperature_bounds(extent, temperature_limits)
 
     def x(t):
         return left + (t - xmin) * (right - left) / (xmax - xmin)
@@ -59,7 +74,7 @@ def write_thermal_svg(path: Path, samples, *, title: str, subtitle: str,
     def power_y(value):
         return power_bottom - value * (power_bottom - power_top)
 
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" data-temperature-min-c="{ymin:g}" data-temperature-max-c="{ymax:g}">',
              f'<title>{escape(title)}</title>',
              f'<desc>{escape(subtitle)}. Blue: actual PT100 readings; dashed red: model estimates. Each measured point has time, temperature and applied u in its tooltip.</desc>',
              '<style>text{font-family:Arial,"DejaVu Sans",sans-serif;fill:#243447} .muted{fill:#61758b} .small{font-size:12px} .hover-point{fill:#1765bb;fill-opacity:0;stroke-opacity:0;pointer-events:all} .hover-point:hover{fill-opacity:1;stroke:white;stroke-width:2;stroke-opacity:1} .value-label{paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}</style>',
@@ -95,9 +110,10 @@ def write_thermal_svg(path: Path, samples, *, title: str, subtitle: str,
     if modeled:
         parts.append('<line x1="300" y1="214" x2="326" y2="214" stroke="#cf4b45" stroke-width="2" stroke-dasharray="7 4"/>')
         text(333, 218, 'Mô hình ước tính', 13)
-    text(960, 218, 'Đơn vị: °C', 12, '#61758b', 'end')
+    scale_label = f'Thang nhiệt: {ymin:g}–{ymax:g} °C' if temperature_limits is not None else 'Đơn vị: °C'
+    text(960, 218, scale_label, 12, '#61758b', 'end')
 
-    for value in _ticks(ymin, ymax):
+    for value in _ticks(ymin, ymax, count=7 if temperature_limits is not None else 5):
         parts.append(f'<line x1="{left}" y1="{y(value):.1f}" x2="{right}" y2="{y(value):.1f}" stroke="#e5ebf2"/>')
         text(left - 12, y(value) + 4, f'{value:g}', 12, '#61758b', 'end')
     for i in range(7):
