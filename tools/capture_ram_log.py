@@ -5,6 +5,7 @@ import argparse
 import csv
 import shutil
 import socket
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -22,7 +23,7 @@ def capacity_warning(capacity: int) -> str | None:
         return None
     return (
         f"CẢNH BÁO: firmware/ELF đang báo dung lượng {capacity}, không phải "
-        f"{EXPECTED_LOG_CAPACITY} bản ghi cho phép đo manual 1 giây/mẫu. "
+        f"{EXPECTED_LOG_CAPACITY} bản ghi cho phép đo manual. "
         "Hãy Clean/Rebuild, nạp lại "
         "firmware và kiểm tra file .bat đang trỏ tới đúng file ELF mới."
     )
@@ -192,6 +193,11 @@ def main() -> int:
                 openocd_process.wait()
 
     print(f"Đã tự động xuất {len(rows)}/{capacity} bản ghi vào {args.csv}.")
+    periodic_ticks = [row[0] for row in rows if row[4] == 'RUN']
+    intervals = [b-a for a, b in zip(periodic_ticks, periodic_ticks[1:]) if b > a]
+    if intervals:
+        print(f"Khoảng ghi RUN thực tế (trung vị): {statistics.median(intervals)/1000:g} s. "
+              "Firmware mới ghi danh định 10 s/mẫu; CSV dùng mốc thời gian đo thực.")
     return 0
 
 

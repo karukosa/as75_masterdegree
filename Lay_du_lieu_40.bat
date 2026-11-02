@@ -80,7 +80,11 @@ echo Da tim thay GDB, firmware va cong cu Python.
 echo Dong cua so Debug STM32CubeIDE neu dang mo.
 echo Khi ket noi SWD: P1 tang u, P2 giam u; chon u roi nhan START.
 if /i "%ANALYSIS_MODE%"=="fixed" echo Giu nguyen u ^(vi du u077^) trong ca lan do. Khong nhan P3 doi u.
-if /i "%ANALYSIS_MODE%"=="fixed" echo Nhan START de dung va luu, hoac chuong trinh dung khi het 120 phut.
+if /i "%ANALYSIS_MODE%"=="fixed" echo Bat dau tu nhiet do moi truong, khong gia nhiet truoc.
+if /i "%ANALYSIS_MODE%"=="fixed" echo Giu u den khi can bang, nhan START de dung va luu. Khong con tu dung sau 120 phut.
+echo Firmware moi ghi 10 giay/mau, RAM 7204 ban ghi ^(khoang 20 gio^). Day RAM thi dung va giu log.
+echo Can Clean/Rebuild va nap firmware moi; kiem tra ELF dung voi ban da nap.
+echo Chu ky SSR van 10 giay; doc cam bien/bao ve moi 300 ms, nguong qua nhiet 138 do C.
 if /i "%ANALYSIS_MODE%"=="step" echo Cho T1 on dinh, chon u2, nhan P3 mot lan roi cho T2 on dinh.
 echo Luu log cu truoc khi reset hoac nhan START cho lan moi.
 echo Neu log cu da hoan tat con trong RAM, script se lay lai log cu ngay khi ket noi.

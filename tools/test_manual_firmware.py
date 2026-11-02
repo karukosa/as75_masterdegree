@@ -49,7 +49,7 @@ static void begin(uint32_t tick) {
 }
 static void process(uint32_t tick) { testTick = tick; HeaterTest_Process(tick); }
 int main(int argc, char **argv) {
-  assert(argc == 2);
+  assert(argc == 3);
   assert(sizeof(HeaterTestLog) == 86472);
   begin(0);
   assert(testSsr == GPIO_PIN_SET);
@@ -81,15 +81,15 @@ int main(int argc, char **argv) {
   /* Scheduled readings retain raw temperature, independent of display filter. */
   begin(0);
   testTemperature = 900;
-  for (uint32_t tick = 1; tick <= 3200; ++tick) process(tick);
+  for (uint32_t tick = 1; tick <= 30200; ++tick) process(tick);
   assert(gHeaterTestLog.sampleCount == 4);
-  assert(gHeaterTestLog.samples[1].elapsedMs == 1200);
-  assert(gHeaterTestLog.samples[2].elapsedMs == 2100);
-  assert(gHeaterTestLog.samples[3].elapsedMs == 3000);
+  assert(gHeaterTestLog.samples[1].elapsedMs == 10200);
+  assert(gHeaterTestLog.samples[2].elapsedMs == 20100);
+  assert(gHeaterTestLog.samples[3].elapsedMs == 30000);
   assert(gHeaterTestLog.samples[1].temperatureTenthsC == 900);
   assert(filteredTemperatureTenthsC < rawTemperatureTenthsC);
   testTemperature = 1390;
-  process(3300);
+  process(30300);
   assert(!heaterTestRunning && testSsr == GPIO_PIN_RESET);
   assert(filteredTemperatureTenthsC < 1380);
   assert(gHeaterTestLog.samples[gHeaterTestLog.sampleCount-1].status == HEATER_LOG_STATUS_OVER_TEMP);
@@ -100,9 +100,37 @@ int main(int argc, char **argv) {
   begin(0); gHeaterTestLog.sampleCount = HEATER_TEST_LOG_CAPACITY-2; process(1);
   assert(!heaterTestRunning && gHeaterTestLog.complete && testSsr == GPIO_PIN_RESET);
   assert(gHeaterTestLog.samples[HEATER_TEST_LOG_CAPACITY-2].status == HEATER_LOG_STATUS_BUFFER_FULL);
-  begin(0); process(HEATER_TEST_DURATION_MS);
-  assert(!heaterTestRunning && gHeaterTestLog.complete && testSsr == GPIO_PIN_RESET);
-  assert(gHeaterTestLog.samples[1].status == HEATER_LOG_STATUS_DONE);
+
+  /* A cold-start run must retain the entire transient, including its first point.
+   * Exercise every 300 ms safety check through 20 hours, beyond the old 2 h stop. */
+  begin(0);
+  testTemperature = 250;
+  heaterTestSelectedU = 77;
+  HeaterTest_Start();
+  assert(gHeaterTestLog.samples[0].temperatureTenthsC == 250);
+  const uint32_t twentyHours = 20U * 60U * 60U * 1000U;
+  for (uint32_t tick = 300; tick <= twentyHours; tick += 300) {
+    process(tick);
+    assert(heaterTestRunning && !gHeaterTestLog.complete);
+    if (tick == 2U * 60U * 60U * 1000U) {
+      assert(gHeaterTestLog.sampleCount == 721);
+    }
+  }
+  assert(gHeaterTestLog.sampleCount == 7201);
+  assert(gHeaterTestLog.samples[7200].elapsedMs == twentyHours);
+  /* Never wrap or overwrite the beginning when the finite RAM log fills. */
+  for (uint32_t tick = twentyHours+300; heaterTestRunning; tick += 300) {
+    assert(tick < twentyHours+20000);
+    process(tick);
+  }
+  assert(gHeaterTestLog.complete && testSsr == GPIO_PIN_RESET);
+  assert(gHeaterTestLog.sampleCount == HEATER_TEST_LOG_CAPACITY-1);
+  assert(gHeaterTestLog.samples[0].elapsedMs == 0);
+  assert(gHeaterTestLog.samples[0].temperatureTenthsC == 250);
+  assert(gHeaterTestLog.samples[gHeaterTestLog.sampleCount-1].status == HEATER_LOG_STATUS_BUFFER_FULL);
+  file = fopen(argv[2], "wb"); assert(file);
+  assert(fwrite((const void *)&gHeaterTestLog, sizeof(gHeaterTestLog), 1, file) == 1);
+  fclose(file);
 
   /* Unsigned time arithmetic must survive HAL tick rollover. */
   begin(UINT32_MAX - 5000U);
@@ -133,7 +161,8 @@ class ManualFirmwareTest(unittest.TestCase):
             command += [str(temp / 'harness.c'), str(ROOT / 'Core/Src/heater_test_log.c'),
                         '-Wl,--gc-sections', '-o', str(temp / 'harness')]
             subprocess.run(command, check=True, capture_output=True, text=True)
-            subprocess.run([str(temp / 'harness'), str(temp / 'log.bin')], check=True)
+            subprocess.run([str(temp / 'harness'), str(temp / 'log.bin'),
+                            str(temp / 'long_log.bin')], check=True)
             rows, complete, _, capacity = extract_ram_log.decode((temp / 'log.bin').read_bytes())
             self.assertTrue(complete)
             self.assertEqual(capacity, 7204)
@@ -141,6 +170,16 @@ class ManualFirmwareTest(unittest.TestCase):
             self.assertEqual(event[0], 10000)
             self.assertEqual(event[-2:], (102, 255))
             self.assertEqual(rows[-1][2:5], (0, 80.0, 'STOP'))
+            long_rows, complete, _, capacity = extract_ram_log.decode((temp / 'long_log.bin').read_bytes())
+            self.assertTrue(complete)
+            self.assertEqual(capacity, 7204)
+            self.assertEqual(len(long_rows), 7203)
+            self.assertEqual(long_rows[0], (0, 30, 1, 25.0, 'RUN', 77, 255))
+            self.assertEqual(long_rows[7200][0], 72_000_000)
+            self.assertEqual(long_rows[-1][4], 'BUFFER_FULL')
+            self.assertEqual(long_rows[-1][2], 0)
+            intervals = {b[0]-a[0] for a, b in zip(long_rows[:-2], long_rows[1:-1])}
+            self.assertEqual(intervals, {9900, 10200})
 
 
 if __name__ == '__main__':
