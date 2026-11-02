@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-/* Two hours at 1 Hz plus command events/final status; 86,472 bytes total. */
+/* About 20 hours at 10 s/sample plus initial/event/final records.
+ * 86,472 bytes total; keep the existing SRAM allocation and binary format. */
 #define HEATER_TEST_LOG_CAPACITY 7204U
 #define HEATER_TEST_LOG_MAGIC "HTLOG001"
 #define HEATER_TEST_LOG_VERSION 2U

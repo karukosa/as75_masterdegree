@@ -5,9 +5,11 @@ Có thể **giữ một u cố định trong cả lần đo** để kiểm tra �
 hiện bước u1 → u2 để dùng công cụ nhận dạng riêng. Thang u là **0–255**.
 Firmware này không chạy PID hoặc tự giữ nhiệt độ; người vận hành chọn u.
 
-Cách đo hiện tại: chạy khoảng **5 lần tại u=77 (30,20%)**, cùng điều kiện ban
-đầu và tải, rồi so sánh các đường nhiệt độ. Không cần đổi sang u2. Chỉ cập nhật
-công cụ trên máy tính cho cách phân tích này, **không cần nạp lại firmware**.
+Cách đo hiện tại: mỗi lần **bắt đầu từ nhiệt độ môi trường, giữ nguyên một u
+đến khi đạt cân bằng nhiệt**, rồi dừng để lưu. Có thể lặp khoảng **5 lần tại
+u=77 (30,20%)** để so sánh; không cần đổi sang u2 và không gia nhiệt trước.
+Ghi danh định **10 giây/mẫu**, không còn tự dừng sau 120 phút. Thay đổi này
+**cần Clean/Rebuild và nạp lại firmware STM32**, cùng cập nhật `.bat`/`tools`.
 
 ## Bảng chân để tạo project mới
 
@@ -65,16 +67,20 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
 
 ## Đo lặp lại tại một u cố định (cách hiện tại)
 
-1. Giữ cùng lượng nước/tải, trạng thái cửa nồi, vị trí PT100, cách gia nhiệt
-   trước và nhiệt độ bắt đầu giữa các lần đo. Cùng số đo PT100 ban đầu chưa
-   bảo đảm thành nồi có cùng trạng thái tích nhiệt.
+1. Đợi nồi, nước và tải trở về gần nhiệt độ môi trường trước **mỗi lần đo**;
+   không gia nhiệt trước đến 100–110 °C. Giữ cùng lượng nước/tải, trạng thái
+   cửa, vị trí PT100 và điều kiện môi trường giữa các lần. Cùng số đo PT100
+   chưa bảo đảm thành nồi đã nguội đều; lưu nhiệt độ môi trường của từng lần
+   vào ghi chú thí nghiệm. Nhiệt độ ban đầu thực được ghi ở t=0.
 2. Lưu xong lần trước trước khi reset hoặc START lại. Nếu log cũ đã hoàn tất
    còn trong RAM, script capture sẽ lấy lại log đó ngay khi kết nối. Để chuẩn
    bị lần mới sau khi đã lưu log cũ, reset MCU, chọn u077 bằng P1/P2, mở script
    capture rồi nhấn START. Giữ u077 suốt lần đo; không nhấn P3 đổi u.
-3. Chọn cùng thời gian ghi trong phạm vi cho phép của thí nghiệm. Nhấn START
-   để dừng/lưu; firmware cũng tự hoàn tất khi hết 120 phút. Các bảo vệ sẵn có
-   vẫn hoạt động. Không coi DONE là xác nhận nhiệt độ ổn định.
+3. Giữ nguyên u đến khi xác nhận nhiệt độ cân bằng trong phạm vi cho phép,
+   rồi nhấn START để dừng/lưu. **Không cần các lần dài bằng nhau**: lần nào
+   chưa cân bằng thì còn tiếp tục theo dõi. Firmware không tự xác nhận cân
+   bằng hoặc tự dừng theo độ trôi; các bảo vệ sẵn có vẫn hoạt động. Bộ nhớ
+   hữu hạn cho phép ghi khoảng 20 giờ, không phải ghi vô hạn (xem dưới).
 4. Lặp khoảng 5 lần, lưu riêng CSV, RAM và biểu đồ. `Lay_du_lieu_40.bat`
    **giữ tên cũ nhưng mặc định phân tích một u cố định** (`ANALYSIS_MODE=fixed`).
    Chỉnh `PROJECT_DIR`, `GDB` trong file cho đúng máy. Mỗi lần mở `.bat`,
@@ -139,23 +145,43 @@ quy trình phía trên, không cần P3:
 
 Chu kỳ SSR luôn là **ton + toff = 10 s**, với
 `ton = floor(10000 × u / 255) ms`, `toff = 10000 − ton`.
-Chu kỳ lấy mẫu độc lập: danh định **1 s/mẫu**, kiểm tra/đọc PT100 mỗi **300 ms**.
-Do lịch đọc 300 ms, khoảng cách mẫu thực có thể khoảng 0,9–1,2 s; dùng
+Chu kỳ ghi mẫu độc lập: danh định **10 s/mẫu**, kiểm tra/đọc PT100 mỗi **300 ms**.
+Do lịch đọc 300 ms, khoảng cách mẫu RUN thực có thể khoảng **9,9–10,2 s**; dùng
 `elapsed_ms` thực tế để vẽ/khớp mô hình. MAX31865 chạy chuyển đổi liên tục,
 giảm chặn vòng lặp do chờ one-shot. Điều chế dùng vòng lặp phần mềm nên có
 sai lệch nhỏ do SPI/hiển thị; cần xác nhận trên bo nếu yêu cầu thời gian chặt.
+Ghi thưa hơn không làm chậm đọc cảm biến hoặc ngắt quá nhiệt. Mẫu đầu t=0
+được ghi ngay khi START, mẫu dừng/lỗi và sự kiện đổi u được ghi ngay khi xảy
+ra, không phải chờ đủ 10 s. `heater_on` chỉ là trạng thái SSR tại thời điểm
+đó; phải dùng `control_u` để biết công suất đặt, không đếm các mẫu on/off để
+suy ra duty vì chu kỳ ghi và cửa sổ SSR đều là 10 s.
 
 Log lưu **nhiệt độ đo chưa qua bộ lọc hiển thị** (vẫn có hiệu chỉnh -5 °C vốn
 có trong driver, không phải giá trị ADC thô). Màn hình dùng nhiệt độ đã lọc;
 bảo vệ quá nhiệt dùng nhiệt độ chưa qua lọc để tránh trễ do lọc phần mềm.
 
-Không tự kết thúc sau 35 phút. Log có 7204 bản ghi, chiếm **86.472 byte RAM**,
-giới hạn tối đa **120 phút cho cả lần đo**; nhiều sự kiện đổi u có thể làm đầy
-sớm hơn. Khi đầy, timeout, dừng tay hoặc lỗi, firmware tắt SSR rồi hoàn tất log.
-`DONE`/timeout **không có nghĩa** nhiệt độ đã xác lập. Không kết luận xác lập
-hay hàm truyền từ việc hết giờ. STM32F407VG có
-128 KiB SRAM thông thường, nhưng phải kiểm tra báo cáo RAM của project CubeIDE
-thực tế khi thêm log vào chương trình khác.
+**Đã bỏ giới hạn tự dừng 120 phút.** Log vẫn có **7204 bản ghi**, chiếm
+**86.472 byte RAM**, đủ khoảng **20 giờ** ở mức ghi 10 s/mẫu khi giữ một u.
+Không tăng mảng RAM vì STM32F407VG chỉ có 128 KiB SRAM thông thường; kiểm tra
+báo cáo RAM của project CubeIDE thực tế khi build. Số mẫu RUN dự kiến, gồm t=0:
+
+| Thời gian đã ghi | Số mẫu RUN xấp xỉ |
+|---|---:|
+| 1 giờ | 361 |
+| 3 giờ | 1.081 |
+| 6 giờ | 2.161 |
+| 12 giờ | 4.321 |
+| 20 giờ | 7.201 |
+
+Còn chỗ dành cho bản ghi kết thúc và một ít sự kiện; nhiều lần đổi u sẽ làm
+đầy sớm hơn. Khi gần đầy RAM, firmware **tắt SSR, giữ toàn bộ dữ liệu từ đầu,
+ghi BUFFER_FULL và hoàn tất log**; không ghi đè đầu đường đáp ứng. Đây là
+giới hạn lưu trữ, không phải xác nhận cân bằng. Dừng tay tạo STOP; lỗi cảm
+biến/ngưỡng 138 °C vẫn tạo trạng thái lỗi và tắt SSR. DONE còn được hỗ trợ để
+đọc log firmware cũ, nhưng bản mới không tự tạo DONE theo thời gian. Nếu cần
+đo vượt khoảng 20 giờ, phải thiết kế lại cách lưu/chu kỳ ghi trước lần đo,
+không chỉ tiếp tục chạy sau BUFFER_FULL. Script hiện lấy toàn bộ RAM khi
+dừng; không truyền liên tục ra ổ đĩa, nên không reset/mất nguồn trước khi lấy log.
 
 ## Chuyển log RAM lên máy qua SWD
 
@@ -213,12 +239,15 @@ python3 tools/capture_ram_log.py \
 ```
 
 Script kết nối qua SWD, cho CPU chạy và chờ cờ `gHeaterTestLog.complete`. Sau
-khi người vận hành nhấn START, toàn bộ các bước lấy mẫu danh định 1 giây/lần, lưu RAM,
-chờ nhấn START để dừng (hoặc đạt giới hạn 120 phút/bộ nhớ),
+khi người vận hành nhấn START, toàn bộ các bước ghi mẫu danh định 10 giây/lần, lưu RAM,
+chờ nhấn START để dừng (hoặc đầy bộ nhớ/lỗi),
 halt CPU, dump RAM và tạo CSV đều tự
 động. Không cần nhấn Pause hay nhập thêm lệnh GDB. Tùy chọn
 `--keep-dump heater_ram.bin` sẽ giữ cả file nhị phân. Nếu GDB của STM32CubeIDE
 không có trong `PATH`, truyền đường dẫn bằng `--gdb`.
+Sau khi xuất CSV, script in khoảng ghi RUN thực tế (trung vị) để kiểm tra.
+Log cũ 1 s/mẫu có cùng dung lượng 7204 vẫn đọc được; dung lượng bộ nhớ riêng
+lẻ không chứng minh đã nạp firmware 10 s/mẫu. Luôn dùng ELF khớp bản đã nạp.
 
 Các thư mục cha trong đường dẫn `--csv` và `--keep-dump` sẽ được tạo tự động.
 Vì vậy có thể dùng trực tiếp, ví dụ `--csv data/manual_step.csv --keep-dump
@@ -328,6 +357,17 @@ tính PID. Nhiệt độ chưa ổn định vẫn là kết quả đo hợp lệ
 vì không đạt tiêu chí cuối. Log lỗi cảm biến/đầy RAM/chưa hoàn tất được ghi
 cảnh báo riêng, không xác nhận cửa sổ cuối hợp lệ.
 
+Đồ thị một lần và biểu đồ chồng mặc định dùng **thang nhiệt 0–140 °C** để
+trình bày tổng quan, tránh tự phóng to khoảng nhiệt nhỏ làm đường nhìn quá
+dốc. Không lọc hay thay đổi số đo, thời gian hoặc độ dốc tính toán. Thang tự
+mở rộng nếu có số đo nằm ngoài để không che dữ liệu. Dùng cùng thang khi so
+sánh các lần; JSON ghi khoảng trục thực tế trong `chart_temperature_range_c`.
+Có thể đổi bằng `--temperature-range-c 0 150`, hoặc xem bản phóng to như trước:
+
+```bat
+py tools\analyze_repeatability.py data\u77_lan1.csv --auto-temperature-range --svg data\u77_lan1_zoom.svg --json data\u77_lan1_zoom.json --summary-csv data\u77_lan1_zoom_summary.csv
+```
+
 Chồng 5 đường từ các file đã đặt tên `u77_lan1.csv`…`u77_lan5.csv`:
 
 ```bat
@@ -353,6 +393,11 @@ chung**: nội suy tuyến tính mỗi 10 s, không ngoại suy sau khi một l�
 bỏ mốc nằm trong khoảng trống lấy mẫu dài. JSON có RMSE từng cặp, trung bình/
 max chênh nhiệt giữa các lần và trung bình độ lệch chuẩn mẫu giữa các lần.
 Không tự gắn nhãn độ lặp lại đạt/không đạt khi chưa có ngưỡng thống nhất.
+Các lần đo từ môi trường tới cân bằng có thể kết thúc ở các thời điểm khác
+nhau. Dùng cả đường đáp ứng, cửa sổ cuối và nhiệt độ môi trường đã ghi chú
+để đánh giá; không ép các lần dừng cùng phút. Những lần gia nhiệt trước ở
+100–110 °C được giữ làm dữ liệu tham khảo, không gộp mặc nhiên vào bộ đo nguội
+theo quy trình mới.
 
 Tiêu chí cửa sổ cuối mặc định: 300 s, max−min ≤1 °C, |độ dốc| ≤0,05 °C/phút.
 Có thể đổi bằng `--steady-window-s`, `--steady-band-c`,

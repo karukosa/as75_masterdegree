@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Heater step-response test firmware
+  * @brief          : Manual heater response recording from ambient to equilibrium
   ******************************************************************************
   */
 #include "main.h"
@@ -15,16 +15,16 @@
 #define BUTTON_DEBOUNCE_MS 30U
 #define BUTTON_LONG_PRESS_MS 1000U
 #define BUTTON_REPEAT_MS 500U
-#define MINUTE_MS 60000U
 #define OVER_TEMPERATURE_TENTHS 1380U
 #define TEMPERATURE_FILTER_ALPHA_NUMERATOR 1
 #define TEMPERATURE_FILTER_ALPHA_DENOMINATOR 4
 #define TEMPERATURE_FILTER_MAX_STEP_TENTHS 50
-#define HEATER_TEST_SAMPLE_MS 1000U
+/* Logging cadence is independent of the fast safety check and SSR window.
+ * 7204 RAM records cover about 20 hours at 10 seconds per periodic sample. */
+#define HEATER_TEST_SAMPLE_MS 10000U
 #define HEATER_TEST_CONTROL_MAX 255U
 #define HEATER_TEST_SAFETY_CHECK_MS 300U
 #define HEATER_TEST_WINDOW_MS 10000U
-#define HEATER_TEST_DURATION_MS (120U * MINUTE_MS)
 
 typedef struct {
   GPIO_TypeDef *port;
@@ -415,11 +415,8 @@ static void HeaterTest_Process(uint32_t now)
     return;
   }
   now = HAL_GetTick();
-  if ((now - heaterTestStartTick) >= HEATER_TEST_DURATION_MS) {
-    HeaterTest_Stop(HEATER_LOG_STATUS_DONE, now);
-    Buzzer_Play(BUZZER_EVENT_COMPLETE);
-    return;
-  }
+  /* No timed completion: the operator stops after confirming equilibrium.
+   * Memory exhaustion and the existing safety checks still stop heating. */
   /* Reserve a record for the stop reason; never heat after filling RAM. */
   if (gHeaterTestLog.sampleCount >= HEATER_TEST_LOG_CAPACITY - 2U) {
     HeaterTest_Stop(HEATER_LOG_STATUS_BUFFER_FULL, now);
