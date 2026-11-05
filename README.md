@@ -399,7 +399,9 @@ nhau. Dùng cả đường đáp ứng, cửa sổ cuối và nhiệt độ môi
 100–110 °C được giữ làm dữ liệu tham khảo, không gộp mặc nhiên vào bộ đo nguội
 theo quy trình mới.
 
-Tiêu chí cửa sổ cuối mặc định: 300 s, max−min ≤1 °C, |độ dốc| ≤0,05 °C/phút.
+Tiêu chí cửa sổ cuối mặc định của chế độ giữ một u: **600 s (10 phút)**,
+max−min **≤1 °C**, |độ dốc| **≤0,05 °C/phút**. Áp dụng cùng cửa sổ cho đồ thị
+một lần và bảng so sánh nhiều lần; không thay đổi chu kỳ ghi mẫu 10 s.
 Có thể đổi bằng `--steady-window-s`, `--steady-band-c`,
 `--steady-slope-c-per-min` theo yêu cầu GV. Đạt một cửa sổ chưa chứng minh cân
 bằng lâu dài; nhiều đường lặp lại tốt vẫn có thể cùng đang tăng nhiệt.

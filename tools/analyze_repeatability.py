@@ -19,7 +19,7 @@ from analyze_heater_step import linear_slope, read_samples
 from thermal_chart import _ticks, clock_label, temperature_bounds, write_thermal_svg
 
 
-def describe(path, window_s=300.0, band_c=1.0, slope_limit=.05):
+def describe(path, window_s=600.0, band_c=1.0, slope_limit=.05):
     samples = read_samples(path)
     if not samples.manual:
         raise ValueError(f'{path.name}: cần CSV có control_u và control_u_max')
@@ -168,7 +168,8 @@ def write_comparison_svg(path, trials, comparison, warnings, temperature_limits=
         for t, _, v in samples:
             tip = f'Lần {i+1}; t={t:.3f} s ({clock_label(t)}); T={v:.2f} °C; u={u}'
             parts.append(f'<circle class="point" cx="{x(t):.1f}" cy="{y(v):.1f}" r="4" fill="{color}"><title>{escape(tip)}</title></circle>')
-    text(60, table_y-18, 'Đánh giá cửa sổ cuối của từng lần (có thể ở các thời điểm kết thúc khác nhau)', 16, 'font-weight="700"')
+    window_minutes = trials[0][1]['tail_window_s']/60
+    text(60, table_y-18, f'Đánh giá {window_minutes:g} phút cuối của từng lần (có thể ở các thời điểm kết thúc khác nhau)', 16, 'font-weight="700"')
     columns = [(65,'Lần'),(130,'Thời gian'),(285,'T đầu'),(405,'T cuối RUN'),(555,'TB cuối'),(700,'Dải cuối'),(845,'Dốc °C/phút'),(1025,'Tiêu chí cuối')]
     for xx, title in columns:
         text(xx, table_y+12, title, 13, 'font-weight="700"')
@@ -198,7 +199,8 @@ def main(argv=None):
     parser.add_argument('--svg', type=Path)
     parser.add_argument('--json', type=Path)
     parser.add_argument('--summary-csv', type=Path)
-    parser.add_argument('--steady-window-s', type=float, default=300)
+    parser.add_argument('--steady-window-s', type=float, default=600,
+                        help='cửa sổ đánh giá cuối lần đo, mặc định 600 s (10 phút)')
     parser.add_argument('--steady-band-c', type=float, default=1)
     parser.add_argument('--steady-slope-c-per-min', type=float, default=.05)
     scale = parser.add_mutually_exclusive_group()
@@ -253,7 +255,7 @@ def main(argv=None):
             control_max=r['control_u_max'], temperature_limits=temperature_limits, parameters=[
                 ('Công suất giữ nguyên', f"u={r['control_u']}/{r['control_u_max']} ({r['power_percent']:.2f}%)"),
                 ('Trạng thái kết thúc', str(r['final_status'])),
-                ('Cửa sổ cuối', f"{limits[0]:g} s; thực có {samples[-1][0]-r['tail_start_s']:.1f} s"),
+                ('Cửa sổ cuối', f"{limits[0]/60:g} phút ({limits[0]:g} s); thực có {samples[-1][0]-r['tail_start_s']:.1f} s"),
                 ('Trung bình cuối (số đo)', f"{r['tail_mean_c']:.2f} °C"),
                 ('Dải nhiệt max−min cuối', f"{r['tail_range_c']:.2f} °C / ngưỡng {limits[1]:g} °C"),
                 ('Độ dốc hồi quy cuối', f"{r['tail_slope_c_per_min']:+.3f} °C/phút"),

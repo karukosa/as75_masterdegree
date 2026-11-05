@@ -102,6 +102,7 @@ if errorlevel 1 goto :capture_failed
 
 echo.
 echo Da lay du lieu. Dang ve do thi va phan tich theo che do %ANALYSIS_MODE%...
+if /i "%ANALYSIS_MODE%"=="fixed" echo Xet 10 phut cuoi: dai nhiet khong qua 1 do C, tri tuyet doi do troi khong qua 0.05 do C/phut.
 py ".\tools\%ANALYZER%" "%CSV%" --svg "%SVG%" --json "%JSON%"
 if errorlevel 1 goto :analysis_failed
 
