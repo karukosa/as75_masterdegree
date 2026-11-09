@@ -257,25 +257,77 @@ def save_snapshot(snapshot, csv_path, backup_dir, dump_path=None):
                                'Đóng Excel trước khi lấy lại log hoàn tất.') from exc
     if dump_path is not None:
         atomic_write(dump_path, snapshot.payload)
-    print(f'Đã lưu {len(snapshot.rows)}/{snapshot.capacity} mẫu; t={elapsed_ms/60000:.2f} phút; '
-          f'{"hoàn tất" if snapshot.complete else "đang chạy"}. CSV: {backup}', flush=True)
+    last = snapshot.rows[-1]
+    power = f'u={last[5]}' if len(last) == 7 else f'{last[1]}%'
+    status = f'HOÀN TẤT ({last[4]})' if snapshot.complete else 'ĐÃ LƯU'
+    print(f'[{datetime.now():%H:%M:%S}] {status} | {elapsed_ms/60000:.1f} phút | '
+          f'{power} | {last[3]:.1f} °C | {len(snapshot.rows)} mẫu', flush=True)
     return backup
 
 
+class SampleProgress:
+    """One terminal line, refreshed only when committed record count changes."""
+    def __init__(self, stream=None, enabled=True):
+        self.stream = stream if stream is not None else sys.stdout
+        self.enabled = enabled and getattr(self.stream, 'isatty', lambda: False)()
+        self.line_width = 0
+
+    @staticmethod
+    def duration(seconds):
+        minutes, seconds = divmod(int(max(0, seconds)), 60)
+        return f'{minutes:02d}:{seconds:02d}'
+
+    def show(self, new_count, elapsed, interval):
+        if not self.enabled:
+            return
+        elapsed = min(max(0, elapsed), interval)
+        fraction = elapsed/interval
+        filled = int(24*fraction)
+        bar = '#'*filled+'-'*(24-filled)
+        line = (f'Nhận mẫu [{bar}] {int(100*fraction):3d}% | +{new_count} mẫu | '
+                f'{self.duration(elapsed)}/{self.duration(interval)}')
+        self.stream.write('\r'+line+' '*max(0, self.line_width-len(line)))
+        self.stream.flush()
+        self.line_width = len(line)
+
+    def clear(self):
+        if self.line_width:
+            self.stream.write('\r'+' '*self.line_width+'\r')
+            self.stream.flush()
+            self.line_width = 0
+
+
 def collect(reader, csv_path, backup_dir, dump_path=None, *, autosave_seconds=600,
-            poll_seconds=5, clock=time.monotonic, sleep=time.sleep):
+            poll_seconds=5, clock=time.monotonic, sleep=time.sleep, progress=None):
     next_save = None
-    while True:
-        header = reader.poll()
-        now = clock()
-        if header is not None and (next_save is None or now >= next_save or header.complete):
-            snapshot = reader.snapshot()
-            if snapshot is not None:
-                save_snapshot(snapshot, csv_path, backup_dir, dump_path)
-                next_save = clock()+autosave_seconds
-                if snapshot.complete:
-                    return snapshot
-        sleep(poll_seconds)
+    saved_at = None
+    saved_count = 0
+    displayed_count = None
+    try:
+        while True:
+            header = reader.poll()
+            now = clock()
+            if header is not None:
+                if progress is not None and saved_at is not None and header.count != displayed_count:
+                    progress.show(max(0, header.count-saved_count), now-saved_at, autosave_seconds)
+                    displayed_count = header.count
+                if next_save is None or now >= next_save or header.complete:
+                    snapshot = reader.snapshot()
+                    if snapshot is not None:
+                        if progress is not None:
+                            progress.clear()
+                        save_snapshot(snapshot, csv_path, backup_dir, dump_path)
+                        saved_at = clock()
+                        next_save = saved_at+autosave_seconds
+                        saved_count = displayed_count = len(snapshot.rows)
+                        if snapshot.complete:
+                            return snapshot
+                        if progress is not None:
+                            progress.show(0, 0, autosave_seconds)
+            sleep(poll_seconds)
+    finally:
+        if progress is not None:
+            progress.clear()
 
 
 def connect_rpc(target, process=None, timeout=10):
@@ -302,10 +354,13 @@ def main(argv=None):
     parser.add_argument('--tcl-target', default='localhost:6666')
     parser.add_argument('--start-openocd', action='store_true')
     parser.add_argument('--openocd', default='openocd')
+    parser.add_argument('--openocd-log', type=Path,
+                        help='log kỹ thuật OpenOCD; mặc định openocd.log cạnh CSV khi tự mở server')
     parser.add_argument('--keep-dump', type=Path)
     parser.add_argument('--backup-dir', type=Path)
     parser.add_argument('--autosave-seconds', type=float, default=600)
     parser.add_argument('--poll-seconds', type=float, default=5)
+    parser.add_argument('--no-progress', action='store_true', help='ẩn thanh tiến trình trong CMD')
     args = parser.parse_args(argv)
     if not args.elf.is_file():
         parser.error(f'Không tìm thấy ELF: {args.elf}')
@@ -313,6 +368,10 @@ def main(argv=None):
         parser.error('CSV đích đã tồn tại. Chọn file/thư mục lần đo mới để giữ nguyên dữ liệu trước.')
     if args.keep_dump and args.keep_dump.resolve() == args.csv.resolve():
         parser.error('CSV và dump RAM phải là hai file khác nhau.')
+    log_path = args.openocd_log or args.csv.parent/'openocd.log'
+    if args.start_openocd and (log_path.resolve() == args.csv.resolve()
+                              or (args.keep_dump and log_path.resolve() == args.keep_dump.resolve())):
+        parser.error('Log OpenOCD phải khác file CSV và dump RAM.')
     if any(not math.isfinite(value) or value <= 0 for value in (args.autosave_seconds, args.poll_seconds)):
         parser.error('Chu kỳ lưu và kiểm tra phải hữu hạn và lớn hơn 0.')
     try:
@@ -322,20 +381,31 @@ def main(argv=None):
     if args.start_openocd and host not in ('localhost', '127.0.0.1'):
         parser.error('--start-openocd chỉ dùng cổng TCL trên máy này.')
     process = None
+    openocd_output = None
     try:
         layout = resolve_layout(args.elf, args.gdb)
         if args.start_openocd:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            openocd_output = log_path.open('a', encoding='utf-8')
+            openocd_output.write(f'\n=== {datetime.now():%Y-%m-%d %H:%M:%S} OpenOCD ===\n')
+            openocd_output.flush()
             process = subprocess.Popen([args.openocd, '-f', 'interface/stlink.cfg',
-                                        '-f', 'target/stm32f4x.cfg', '-c', f'tcl_port {port}'])
+                                        '-f', 'target/stm32f4x.cfg', '-c', f'tcl_port {port}'],
+                                       stdin=subprocess.DEVNULL, stdout=openocd_output,
+                                       stderr=subprocess.STDOUT)
         with connect_rpc(args.tcl_target, process) as connection:
             rpc = OpenOcdRpc(connection)
             reader = LiveReader(rpc, layout)
             reader.poll()  # Probe background memory access before inviting START.
-            print(f'Đã nối SWD chỉ đọc, không halt CPU. Tự lưu CSV mỗi {args.autosave_seconds/60:g} phút. '
-                  'Chọn u rồi nhấn START trên nồi; nếu đang chạy thì tiếp tục thu lần hiện tại.', flush=True)
+            print(f'Đã kết nối SWD | Tự lưu CSV mỗi {args.autosave_seconds/60:g} phút', flush=True)
+            print(f'CSV: {args.csv}\nBản sao: {args.backup_dir or args.csv.parent/"snapshots"}', flush=True)
+            if openocd_output is not None:
+                print(f'Log kỹ thuật: {log_path}', flush=True)
+            print('Chờ START trên nồi; nếu đã chạy thì tiếp tục thu lần hiện tại.', flush=True)
             result = collect(reader, args.csv,
                              args.backup_dir or args.csv.parent/'snapshots', args.keep_dump,
-                             autosave_seconds=args.autosave_seconds, poll_seconds=args.poll_seconds)
+                             autosave_seconds=args.autosave_seconds, poll_seconds=args.poll_seconds,
+                             progress=SampleProgress(enabled=not args.no_progress))
             warning = capacity_warning(result.capacity)
             if warning:
                 print(warning, file=sys.stderr)
@@ -347,6 +417,8 @@ def main(argv=None):
         return 130
     except (CaptureError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
         print(f'LỖI: {exc}\nGiữ nguyên các CSV đã lưu. Công cụ không gửi lệnh dừng nồi, halt hoặc reset.', file=sys.stderr)
+        if openocd_output is not None:
+            print(f'Chi tiết OpenOCD: {log_path}', file=sys.stderr)
         return 2
     finally:
         if process is not None and process.poll() is None:
@@ -356,6 +428,8 @@ def main(argv=None):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
+        if openocd_output is not None:
+            openocd_output.close()
 
 
 if __name__ == '__main__':
