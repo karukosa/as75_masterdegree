@@ -213,8 +213,16 @@ Chạy trực tiếp trên Windows (thay ELF/GDB theo máy):
 py tools\capture_live_ram_log.py --start-openocd --elf "Debug\AS75_MD.elf" --csv "data\run_moi\manual_step.csv" --autosave-seconds 600 --keep-dump "data\run_moi\manual_ram.bin"
 ```
 
-CMD chỉ hiện trạng thái kết nối, vị trí file, một dòng mỗi lần lưu CSV và
-cảnh báo/lỗi cần xử lý. Khi tự mở OpenOCD, toàn bộ đầu ra kỹ thuật (kể cả
+CMD hiện thanh tiến trình **trên cùng một dòng**, làm mới khi phát hiện số
+bản ghi đã công bố trong RAM tăng (kiểm tra mặc định mỗi 5 s). Thanh hiển thị
+thời gian tới lần lưu tiếp theo và `+N mẫu` tính từ bản vừa lưu; phần trăm
+là tiến độ của khoảng 10 phút, không phải phần trăm hoàn tất cả thí nghiệm.
+Đủ 10 phút, lưu CSV thành công rồi in thông báo ĐÃ LƯU, đặt lại thanh về 0
+cho khoảng kế tiếp. Nếu dừng nồi sớm, vẫn lưu bản cuối ngay. Không tăng tiến
+trình theo mẫu giả hay in thêm một dòng cho mỗi mẫu. Có thể ẩn bằng
+`--no-progress`; khi chuyển stdout ra file thì tự ẩn thanh để giữ log dễ đọc.
+Vị trí file chỉ in khi kết nối, cảnh báo/lỗi cần xử lý vẫn hiện rõ.
+Khi tự mở OpenOCD, toàn bộ đầu ra kỹ thuật (kể cả
 `running` và số hex đọc RAM) được chuyển vào **`openocd.log` cạnh CSV**;
 không in liên tục ra CMD. Có thể đổi vị trí bằng `--openocd-log`. Khi lỗi,
 CMD chỉ rõ file log để xem chi tiết. Nếu tự mở OpenOCD trong cửa sổ khác,

@@ -2,6 +2,7 @@ import contextlib
 import csv
 import io
 from pathlib import Path, PureWindowsPath
+import re
 import struct
 import tempfile
 from types import SimpleNamespace
@@ -263,14 +264,21 @@ class LiveCaptureTest(unittest.TestCase):
         def sleep(seconds):
             clock.now+=seconds
             if clock.now>=705:
-                rpc.set([record(0),record(600000),record(700000,2)],complete=True)
+                rpc.set([record(0),record(300000),record(600000),record(700000,2)],complete=True)
             elif clock.now>=605:
-                rpc.set([record(0),record(600000)])
+                rpc.set([record(0),record(300000),record(600000)])
+            elif clock.now>=305:
+                rpc.set([record(0),record(300000)])
             elif clock.now>=5:
                 rpc.set([record(0)])
         target=self.root/'manual.csv';dump=self.root/'manual.bin'
-        result=live.collect(reader,target,self.root/'snapshots',dump,autosave_seconds=600,
-                            poll_seconds=5,clock=lambda:clock.now,sleep=sleep)
+        class Terminal(io.StringIO):
+            def isatty(self):return True
+        output=Terminal()
+        with contextlib.redirect_stdout(output):
+            result=live.collect(reader,target,self.root/'snapshots',dump,autosave_seconds=600,
+                                poll_seconds=5,clock=lambda:clock.now,sleep=sleep,
+                                progress=live.SampleProgress(stream=output))
         self.assertTrue(result.complete)
         self.assertEqual(clock.now,705)
         self.assertEqual(len(list((self.root/'snapshots').glob('*.csv'))),3)
@@ -278,6 +286,15 @@ class LiveCaptureTest(unittest.TestCase):
         self.assertEqual(rows[-1]['status'],'STOP')
         self.assertEqual(rows[-1]['elapsed_ms'],'700000')
         self.assertTrue(decode(dump.read_bytes())[1])
+        transcript=output.getvalue()
+        # No redraw for repeated polls of the same count. Reset only after a save.
+        percentages=re.findall(r'\] +([0-9]+)% \|',transcript)
+        self.assertEqual(percentages,['0','50','100','0','16'])
+        self.assertIn('+1 mẫu',transcript)
+        self.assertIn('+2 mẫu',transcript)
+        self.assertEqual(transcript.count('ĐÃ LƯU'),2)
+        self.assertIn('HOÀN TẤT (STOP)',transcript)
+        self.assertNotIn('Nhận mẫu [',transcript[transcript.rfind('HOÀN TẤT (STOP)'):])
 
     def test_cli_completed_log_does_not_run_live_gdb_or_touch_firmware(self):
         elf=self.root/'firmware.elf';elf.touch()
