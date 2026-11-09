@@ -213,6 +213,13 @@ Chạy trực tiếp trên Windows (thay ELF/GDB theo máy):
 py tools\capture_live_ram_log.py --start-openocd --elf "Debug\AS75_MD.elf" --csv "data\run_moi\manual_step.csv" --autosave-seconds 600 --keep-dump "data\run_moi\manual_ram.bin"
 ```
 
+CMD chỉ hiện trạng thái kết nối, vị trí file, một dòng mỗi lần lưu CSV và
+cảnh báo/lỗi cần xử lý. Khi tự mở OpenOCD, toàn bộ đầu ra kỹ thuật (kể cả
+`running` và số hex đọc RAM) được chuyển vào **`openocd.log` cạnh CSV**;
+không in liên tục ra CMD. Có thể đổi vị trí bằng `--openocd-log`. Khi lỗi,
+CMD chỉ rõ file log để xem chi tiết. Nếu tự mở OpenOCD trong cửa sổ khác,
+đầu ra của server đó vẫn do cửa sổ ấy quản lý.
+
 GDB chỉ đọc địa chỉ/kích thước `gHeaterTestLog` và địa chỉ biến static
 `heaterTestStartTick` từ ELF **offline**, không kết nối bo. Công cụ dùng cổng
 TCL OpenOCD `localhost:6666` để đọc RAM qua SWD khi CPU vẫn chạy; chỉ gửi

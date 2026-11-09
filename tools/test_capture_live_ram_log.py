@@ -281,16 +281,36 @@ class LiveCaptureTest(unittest.TestCase):
 
     def test_cli_completed_log_does_not_run_live_gdb_or_touch_firmware(self):
         elf=self.root/'firmware.elf';elf.touch()
-        rpc=MemoryRpc();rpc.set([record(0),record(10000,2)],complete=True)
-        target=self.root/'manual.csv'
-        with mock.patch.object(live,'resolve_layout',return_value=rpc.layout), \
-             mock.patch.object(live,'connect_rpc',return_value=contextlib.nullcontext(object())), \
-             mock.patch.object(live,'OpenOcdRpc',return_value=rpc), \
-             mock.patch.object(live.subprocess,'Popen') as process:
-            result=live.main(['--elf',str(elf),'--csv',str(target)])
-        self.assertEqual(result,0)
-        self.assertTrue(target.exists())
-        process.assert_not_called()
+        for start_server in (False,True):
+            with self.subTest(start_server=start_server):
+                rpc=MemoryRpc();rpc.set([record(0),record(10000,2)],complete=True)
+                target=self.root/f'manual_{start_server}.csv'
+                output=io.StringIO()
+                child=SimpleNamespace(poll=lambda:None,terminate=mock.Mock(),wait=mock.Mock())
+                def launch(command,**kwargs):
+                    # Simulate the actual OpenOCD command-result echo in the screenshot.
+                    kwargs['stdout'].write('running\n0x1d776\n0x4f4c5448 0x31303047\n')
+                    kwargs['stdout'].flush()
+                    return child
+                with mock.patch.object(live,'resolve_layout',return_value=rpc.layout), \
+                     mock.patch.object(live,'connect_rpc',return_value=contextlib.nullcontext(object())), \
+                     mock.patch.object(live,'OpenOcdRpc',return_value=rpc), \
+                     mock.patch.object(live.subprocess,'Popen',side_effect=launch) as process, \
+                     contextlib.redirect_stdout(output):
+                    result=live.main(['--elf',str(elf),'--csv',str(target)]+
+                                     (['--start-openocd'] if start_server else []))
+                self.assertEqual(result,0)
+                self.assertTrue(target.exists())
+                self.assertIn('HOÀN TẤT (STOP)',output.getvalue())
+                self.assertNotIn('0x4f4c5448',output.getvalue())
+                self.assertNotIn('\nrunning\n',output.getvalue())
+                if start_server:
+                    self.assertIn('0x4f4c5448',(self.root/'openocd.log').read_text())
+                    self.assertEqual(process.call_args.kwargs['stderr'],live.subprocess.STDOUT)
+                    self.assertTrue(process.call_args.kwargs['stdout'].closed)
+                    child.terminate.assert_called_once()
+                else:
+                    process.assert_not_called()
 
     def test_cli_will_not_overwrite_a_previous_trial(self):
         elf=self.root/'firmware.elf';elf.touch()
