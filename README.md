@@ -10,6 +10,8 @@ Cách đo hiện tại: mỗi lần **bắt đầu từ nhiệt độ môi trư�
 u=77 (30,20%)** để so sánh; không cần đổi sang u2 và không gia nhiệt trước.
 Ghi danh định **10 giây/mẫu**, không còn tự dừng sau 120 phút. Thay đổi này
 **cần Clean/Rebuild và nạp lại firmware STM32**, cùng cập nhật `.bat`/`tools`.
+Riêng tính năng tự lưu CSV mỗi 10 phút bên dưới chỉ cập nhật công cụ PC;
+nếu đã nạp firmware 10 s/mẫu thì không cần nạp lại cho tính năng này.
 
 ## Bảng chân để tạo project mới
 
@@ -88,6 +90,9 @@ phép đo đã được loại khỏi mã nguồn. Các nhãn USB OTG FS và LSE
    `manual_step.csv`, `manual_ram.bin`, `manual_step.svg`,
    `manual_step_summary.json`, `manual_step_summary.csv`.
    Những file cũ trực tiếp trong `data` không bị ghi đè.
+   `.bat` mặc định dùng `CAPTURE_MODE=live`: CSV tự cập nhật mỗi 10 phút,
+   kèm các bản sao trong `run_<ngày giờ>/snapshots/`. Biểu đồ/summary chỉ
+   dựng sau khi nồi dừng; không tự vẽ lại trong lúc chạy.
 5. Dùng công cụ bên dưới để so sánh các CSV đã chọn. Chỉ đưa vào cùng nhóm
    các lần chạy cùng u, tránh trộn các mức 60–80 hoặc các lần khác cách chuẩn
    bị. CSV có bước đổi u bị từ chối ở chế độ phân tích này.
@@ -180,20 +185,83 @@ giới hạn lưu trữ, không phải xác nhận cân bằng. Dừng tay tạo
 biến/ngưỡng 138 °C vẫn tạo trạng thái lỗi và tắt SSR. DONE còn được hỗ trợ để
 đọc log firmware cũ, nhưng bản mới không tự tạo DONE theo thời gian. Nếu cần
 đo vượt khoảng 20 giờ, phải thiết kế lại cách lưu/chu kỳ ghi trước lần đo,
-không chỉ tiếp tục chạy sau BUFFER_FULL. Script hiện lấy toàn bộ RAM khi
-dừng; không truyền liên tục ra ổ đĩa, nên không reset/mất nguồn trước khi lấy log.
+không chỉ tiếp tục chạy sau BUFFER_FULL. Chế độ live sao lưu phần log đã ghi
+lên ổ đĩa mỗi 10 phút và lấy bản cuối khi dừng; không xóa/giải phóng các mẫu
+trong RAM. Nếu reset/mất nguồn, chỉ những bản đã lưu chắc chắn còn trên PC.
 
 ## Chuyển log RAM lên máy qua SWD
 
 Thư mục `tools/` **không được nạp vào STM32**. Các file Python trong thư mục
-này chỉ chạy trên máy tính sau khi đã lấy file dump RAM về. Phần thực sự được
+này chạy trên máy tính để lấy RAM qua SWD, lưu CSV và phân tích log. Phần thực sự được
 biên dịch và nạp vào vi điều khiển gồm `Core/Src/main.c`,
 `Core/Src/heater_test_log.c` và header `Core/Inc/heater_test_log.h`. Nếu đang
 chép thay đổi sang một project STM32CubeIDE khác thay vì build trực tiếp repo
 này, cần thêm `heater_test_log.c` vào nhóm `Core/Src`/danh sách source của
 project; nếu không linker sẽ báo thiếu các hàm `HeaterTestLog_*`.
 
-### Cách dễ nhất: để script tự mở GDB server
+### Tự lưu CSV mỗi 10 phút khi nồi đang chạy (mặc định trong .bat)
+
+Đóng phiên Debug của CubeIDE, dùng đúng ELF Debug đã nạp lên bo, rồi chạy
+`Lay_du_lieu_40.bat`. `CAPTURE_MODE=live` chọn `capture_live_ram_log.py`.
+Có thể bắt đầu thu trước START, hoặc nối vào một lần đang chạy **mà không
+reset/nạp lại MCU**. Khi bắt đầu lần hoàn toàn mới, vẫn lưu log cũ trước khi
+reset/START. Nếu RAM đang chứa log đã hoàn tất, công cụ lấy lại ngay log đó.
+
+Chạy trực tiếp trên Windows (thay ELF/GDB theo máy):
+
+```bat
+py tools\capture_live_ram_log.py --start-openocd --elf "Debug\AS75_MD.elf" --csv "data\run_moi\manual_step.csv" --autosave-seconds 600 --keep-dump "data\run_moi\manual_ram.bin"
+```
+
+GDB chỉ đọc địa chỉ/kích thước `gHeaterTestLog` và địa chỉ biến static
+`heaterTestStartTick` từ ELF **offline**, không kết nối bo. Công cụ dùng cổng
+TCL OpenOCD `localhost:6666` để đọc RAM qua SWD khi CPU vẫn chạy; chỉ gửi
+`curstate` và `read_memory`. Không dùng Pause/Halt, reset/resume hoặc ghi RAM
+để lấy bản sao. Cần OpenOCD hỗ trợ đọc bộ nhớ Cortex-M4 khi đang chạy (ví dụ
+bản 0.12 đã dùng trước đây); nếu không đọc được, công cụ báo lỗi và giữ các
+bản đã lưu, không chuyển sang cách halt CPU. Cách này cần kiểm tra thực tế
+trên ST-Link/bo; kiểm thử phần mềm không xác nhận được mọi bản OpenOCD.
+
+- Ghi bản đầu ngay khi có mẫu, rồi cập nhật **mỗi 600 s trên PC** (sai lệch
+  nhỏ theo thời gian đọc RAM/lịch kiểm tra).
+- Kiểm tra header khoảng mỗi 5 s, lưu bản cuối khi `complete=1`, không cần
+  chờ đủ 10 phút sau khi bạn dừng nồi.
+- `manual_step.csv` là bản đầy đủ mới nhất, không chỉ 10 phút vừa qua.
+  `snapshots/` giữ từng bản có ngày giờ và nhãn `partial`/`final`.
+- Chỉ đọc các bản ghi đã được firmware công bố qua `sampleCount`; kiểm tra
+  mốc START và header trước/sau khi sao chép để tránh trộn lần đo hoặc lưu
+  bản sao thiếu dòng cuối. Khi phát hiện reset/chạy lần mới, dừng thu và giữ
+  những bản cũ thay vì ghi đè.
+- Ghi file tạm, flush/fsync rồi thay file đích. Nếu Excel khóa CSV chính,
+  bản sao riêng vẫn được lưu; đóng Excel để cập nhật file chính. Nếu file
+  chính vẫn bị khóa ở lần cuối, báo lỗi và giữ bản `final` trong snapshots
+  thay vì phân tích nhầm CSV cũ.
+- CSV đang chạy giữ trạng thái RUN thật; không thêm STOP/DONE giả. Đừng sửa
+  bản partial thành STOP để ép công cụ phân tích xác nhận hoàn tất. Chỉ dùng
+  CSV cuối của mỗi lần khi ghép so sánh; không coi các snapshots là nhiều
+  lần thử độc lập.
+
+Chu kỳ ghi trên MCU **vẫn là 10 s/mẫu**; tự lưu **10 phút/lần trên PC** và
+cửa sổ xét **10 phút cuối** là ba việc riêng. Không tăng bộ nhớ hoặc bỏ giới
+hạn khoảng 20 giờ của log RAM. `--keep-dump` lưu header và phần bản ghi đã
+dùng; dump partial có `complete=0` và vẫn đọc được bằng extractor.
+
+Giữ PC thức và kết nối ST-Link để thu liên tục. Nếu PC/ngắt kết nối hoặc
+MCU mất nguồn, chỉ các CSV đã lưu chắc chắn còn trên ổ đĩa; phần sau bản lưu
+gần nhất có thể mất. Công cụ không tự điều khiển dừng nồi: đóng cửa sổ hoặc
+Ctrl+C chỉ dừng thu trên PC, nồi có thể vẫn gia nhiệt; muốn dừng nồi dùng
+START trên máy. Nếu cần mở lại sau lỗi nhưng RAM còn nguyên, chạy `.bat`
+lại để tạo thư mục mới và đọc lại log đang có, không reset trước.
+
+Có thể dùng `--tcl-target localhost:6666`, `--poll-seconds 5` hoặc
+`--backup-dir` nếu tự cấu hình. Khi tự mở OpenOCD, bỏ `--start-openocd`.
+Không mở công cụ live đồng thời với Debug/capture GDB cũ.
+
+### Cách cũ: chỉ xuất sau khi dừng bằng GDB
+
+Đặt `CAPTURE_MODE=stop` trong `.bat` nếu cần dùng lại cách cũ. Chỉ mở kết nối
+GDB này trước START hoặc sau khi nồi đã dừng; không dùng để lấy bản sao định
+kỳ khi đang gia nhiệt vì kết nối có bước halt CPU.
 
 Cài OpenOCD và GNU Arm GDB, cắm cáp USB vào cổng **ST-LINK** của bo, đóng phiên
 Debug đang mở trong STM32CubeIDE, rồi chạy lệnh sau **trước khi nhấn START**:

@@ -14,6 +14,13 @@ exit /b %RESULT%
 rem Giu ten cu de tuong thich shortcut. Mac dinh do lap lai tai mot u.
 rem Doi thanh step neu can dung lai phep do u1 den u2.
 set "ANALYSIS_MODE=fixed"
+rem live: tu luu CSV moi 10 phut qua TCL khi CPU van chay.
+rem stop: cach cu, chi xuat CSV sau khi dung (mo truoc START hoac sau khi noi da dung).
+set "CAPTURE_MODE=live"
+set "CAPTURE_TOOL=capture_ram_log.py"
+set "CAPTURE_OPTIONS="
+if /i "%CAPTURE_MODE%"=="live" set "CAPTURE_TOOL=capture_live_ram_log.py"
+if /i "%CAPTURE_MODE%"=="live" set "CAPTURE_OPTIONS=--autosave-seconds 600"
 title AS75 - Lay mau manual
 
 rem Project firmware STM32CubeIDE. Sua duong dan nay neu project duoc di chuyen.
@@ -29,6 +36,7 @@ if /i "%ANALYSIS_MODE%"=="step" set "ANALYZER=analyze_heater_step.py"
 echo ==============================================
 echo AS75 - THI NGHIEM MANUAL, THANG 0-255
 echo Che do phan tich: %ANALYSIS_MODE%
+echo Che do lay du lieu: %CAPTURE_MODE%
 echo ==============================================
 echo.
 echo Kiem tra cac file can thiet...
@@ -44,8 +52,8 @@ if not exist "%ELF%" echo LOI: Khong tim thay firmware ELF: %ELF%
 if not exist "%ELF%" echo Hay Build Project trong STM32CubeIDE.
 if not exist "%ELF%" exit /b 5
 
-if not exist "%PYTHON_PROJECT%tools\capture_ram_log.py" echo LOI: Khong tim thay tools\capture_ram_log.py trong %PYTHON_PROJECT%
-if not exist "%PYTHON_PROJECT%tools\capture_ram_log.py" exit /b 6
+if not exist "%PYTHON_PROJECT%tools\%CAPTURE_TOOL%" echo LOI: Khong tim thay tools\%CAPTURE_TOOL% trong %PYTHON_PROJECT%
+if not exist "%PYTHON_PROJECT%tools\%CAPTURE_TOOL%" exit /b 6
 
 if not exist "%PYTHON_PROJECT%tools\%ANALYZER%" echo LOI: Khong tim thay tools\%ANALYZER% trong %PYTHON_PROJECT%
 if not exist "%PYTHON_PROJECT%tools\%ANALYZER%" exit /b 7
@@ -78,25 +86,30 @@ if errorlevel 1 exit /b 9
 echo.
 echo Da tim thay GDB, firmware va cong cu Python.
 echo Dong cua so Debug STM32CubeIDE neu dang mo.
-echo Khi ket noi SWD: P1 tang u, P2 giam u; chon u roi nhan START.
+echo Khi bat dau lan moi: P1 tang u, P2 giam u; chon u roi nhan START.
 if /i "%ANALYSIS_MODE%"=="fixed" echo Giu nguyen u ^(vi du u077^) trong ca lan do. Khong nhan P3 doi u.
 if /i "%ANALYSIS_MODE%"=="fixed" echo Bat dau tu nhiet do moi truong, khong gia nhiet truoc.
 if /i "%ANALYSIS_MODE%"=="fixed" echo Giu u den khi can bang, nhan START de dung va luu. Khong con tu dung sau 120 phut.
 echo Firmware moi ghi 10 giay/mau, RAM 7204 ban ghi ^(khoang 20 gio^). Day RAM thi dung va giu log.
-echo Can Clean/Rebuild va nap firmware moi; kiem tra ELF dung voi ban da nap.
+echo Dung ELF Debug trung voi firmware da nap. Tinh nang tu luu CSV nay khong can nap lai firmware.
 echo Chu ky SSR van 10 giay; doc cam bien/bao ve moi 300 ms, nguong qua nhiet 138 do C.
 if /i "%ANALYSIS_MODE%"=="step" echo Cho T1 on dinh, chon u2, nhan P3 mot lan roi cho T2 on dinh.
 echo Luu log cu truoc khi reset hoac nhan START cho lan moi.
 echo Neu log cu da hoan tat con trong RAM, script se lay lai log cu ngay khi ket noi.
-echo Khi da luu log cu, reset MCU truoc khi ket noi de chuan bi lan do moi.
+echo Neu bat dau lan moi: luu log cu roi reset MCU truoc khi ket noi.
+if /i "%CAPTURE_MODE%"=="live" echo Neu dang chay: khong reset hay nhan START lan moi; che do live doc tiep RAM dang co.
+if /i "%CAPTURE_MODE%"=="stop" echo Che do stop chi ket noi truoc START hoac sau khi noi da dung, khong lay ban sao trong luc gia nhiet.
+if /i "%CAPTURE_MODE%"=="live" echo CSV tu cap nhat moi 10 phut, them cac ban sao trong thu muc snapshots.
+if /i "%CAPTURE_MODE%"=="live" echo Khong Pause/Halt CPU de sao luu. Khi dung noi, luu ban cuoi ngay.
+if /i "%CAPTURE_MODE%"=="live" echo Dong cua so/Ctrl+C chi dung thu tren PC, khong tat gia nhiet tren noi.
 echo.
 
-py ".\tools\capture_ram_log.py" ^
+py ".\tools\%CAPTURE_TOOL%" ^
   --start-openocd ^
   --gdb "%GDB%" ^
   --elf "%ELF%" ^
   --csv "%CSV%" ^
-  --keep-dump "%RAM%"
+  --keep-dump "%RAM%" %CAPTURE_OPTIONS%
 
 if errorlevel 1 goto :capture_failed
 
@@ -120,7 +133,8 @@ exit /b 0
 :capture_failed
 popd
 echo.
-echo CO LOI: Khong lay duoc du lieu. Khong thuc hien phan tich.
+echo CO LOI THU DU LIEU: Khong thuc hien phan tich.
+echo Kiem tra CSV va snapshots da luu tai %RUN_DIR%. Noi co the van dang chay; kiem tra tren may.
 exit /b 10
 
 :analysis_failed
